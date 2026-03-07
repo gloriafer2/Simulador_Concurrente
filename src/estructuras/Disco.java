@@ -10,7 +10,7 @@ package estructuras;
  */
 public class Disco {
     
-    private Bloque[] bloques; // El espacio físico del simulador
+    private Bloque[] bloques; 
     private int tamañoTotal;
 
     public Disco(int cantidadBloques) {
@@ -23,7 +23,7 @@ public class Disco {
         }
     }
 
-    // Método para buscar el primer bloque libre (Muy importante para CREATE)
+    // Método para buscar el primer bloque libre 
     public int buscarBloqueLibre() {
         for (int i = 0; i < tamañoTotal; i++) {
             if (!bloques[i].isOcupado()) {

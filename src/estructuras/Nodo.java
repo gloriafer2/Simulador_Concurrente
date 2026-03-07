@@ -8,14 +8,30 @@ package estructuras;
  *
  * @author Gloria
  */
-public class Nodo<T> {
-    T dato;
-    Nodo<T> siguiente;
-    
-    
-    public Nodo(T dato){
+public class Nodo {
+    private Object dato;    // Aquí se guarda el Proceso o el Archivo
+    private Nodo siguiente; // El puntero al siguiente eslabón
+
+    public Nodo(Object dato) {
         this.dato = dato;
         this.siguiente = null;
+    }
+
+    
+    public Object getDato() {
+        return dato;
+    }
+
+    public void setDato(Object dato) {
+        this.dato = dato;
+    }
+
+    public Nodo getSiguiente() {
+        return siguiente;
+    }
+
+    public void setSiguiente(Nodo siguiente) {
+        this.siguiente = siguiente;
     }
     
 }

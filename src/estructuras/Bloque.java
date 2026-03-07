@@ -9,10 +9,10 @@ package estructuras;
  * @author Gloria
  */
 public class Bloque {
-    private int id;              // Posición en el disco (0, 1, 2...)
+    private int id;              // Posición en el disco
     private boolean ocupado;      // ¿Tiene datos?
     private String nombreArchivo; // Para saber a qué archivo pertenece
-    private int siguienteBloque;  // PUNTERO: El ID del próximo bloque (Asignación Encadenada)
+    private int siguienteBloque;  // PUNTERO: El ID del próximo bloque 
 
     public Bloque(int id) {
         this.id = id;

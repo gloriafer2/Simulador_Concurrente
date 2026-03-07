@@ -12,8 +12,8 @@ public class Archivo {
     private String nombre;
     private int primerBloque; // El ID del bloque donde empieza en el Disco
     private int tamañoBloques; // Cuántos bloques ocupa
-    private String dueño;      // "Admin" o "Usuario1", etc. (Requerimiento #5)
-    private String color;      // Para la visualización en el SD (Requerimiento #2)
+    private String dueño;      // "Admin" o "Usuario1"
+    private String color;      // Para la visualización en el SD 
 
     public Archivo(String nombre, int primerBloque, int tamañoBloques, String dueño, String color) {
         this.nombre = nombre;

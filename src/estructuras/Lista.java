@@ -8,43 +8,46 @@ package estructuras;
  *
  * @author Gloria
  */
-public class Lista<T> {
-    private Nodo<T> cabeza;
-    private int tamaño;
-    
-    public Lista(){
-        this.cabeza = null;
-        this.tamaño = 0;
-        
+public class Lista {
+    private Nodo inicio;
+    private int tamano;
+
+    public Lista() {
+        this.inicio = null;
+        this.tamano = 0;
     }
-         
-    public void agregar(T dato) {
-        Nodo<T> nuevo = new Nodo<>(dato);
-        if (cabeza == null) {
-            cabeza = nuevo;
+
+    public void insertar(Object dato) {
+        Nodo nuevo = new Nodo(dato);
+        if (inicio == null) {
+            inicio = nuevo;
         } else {
-            Nodo<T> temp = cabeza;
-            while (temp.siguiente != null) {
-                temp = temp.siguiente;
+            Nodo aux = inicio;
+            while (aux.getSiguiente() != null) {
+                aux = aux.getSiguiente();
             }
-            temp.siguiente = nuevo;
+            aux.setSiguiente(nuevo);
         }
-        tamaño++;
+        tamano++;
     }
 
-    // Para saber cuántos elementos hay
-    public int getTamaño() {
-        return tamaño;
-    }
-
-    // Para sacar un elemento de una posición (como el índice de un arreglo)
-    public T obtener(int indice) {
-        if (indice < 0 || indice >= tamaño) return null;
-        Nodo<T> temp = cabeza;
+    // Método para buscar un elemento (útil para el JTree)
+    public Object obtener(int indice) {
+        if (indice < 0 || indice >= tamano) return null;
+        Nodo aux = inicio;
         for (int i = 0; i < indice; i++) {
-            temp = temp.siguiente;
+            aux = aux.getSiguiente();
         }
-        return temp.dato;
+        return aux.getDato();
+    }
+
+    // Getters básicos
+    public int getTamano() {
+        return tamano;
+    }
+    
+    public Nodo getInicio() {
+        return inicio;
     }
     
 }
