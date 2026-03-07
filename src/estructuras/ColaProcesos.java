@@ -4,29 +4,41 @@
  */
 package estructuras;
 
-/**
- *
- * @author Gloria
- */
 public class ColaProcesos {
-    private Nodo cabeza; 
-    private Nodo ultimo;
+    private Nodo cabeza; // Tu puntero inicial
 
-    public void encolar(Proceso p) {
-        Nodo nuevo = new Nodo(p); 
-        if (cabeza == null) {
-            cabeza = nuevo;
-            ultimo = nuevo;
-        } else {
-            ultimo.setSiguiente(nuevo);
-            ultimo = nuevo;
-        }
+    public ColaProcesos() {
+        this.cabeza = null;
+    }
+
+    public boolean estaVacia() {
+        return cabeza == null;
+    }
+
+    public Proceso verPrimero() {
+        if (estaVacia()) return null;
+        return cabeza.getProceso(); 
     }
 
     public Proceso desencolar() {
-        if (cabeza == null) return null;
-        Proceso p = (Proceso) cabeza.getDato();
-        cabeza = cabeza.getSiguiente();
+        if (estaVacia()) return null;
+        
+        Proceso p = cabeza.getProceso();
+        cabeza = cabeza.getSiguiente(); // Movemos el puntero al siguiente
         return p;
+    }
+    
+    // Método para agregar al final (si no lo tienes)
+    public void encolar(Proceso nuevoProceso) {
+        Nodo nuevoNodo = new Nodo(nuevoProceso);
+        if (estaVacia()) {
+            cabeza = nuevoNodo;
+        } else {
+            Nodo temp = cabeza;
+            while (temp.getSiguiente() != null) {
+                temp = temp.getSiguiente();
+            }
+            temp.setSiguiente(nuevoNodo);
+        }
     }
 }

@@ -4,37 +4,48 @@
  */
 package estructuras;
 
-/**
- *
- * @author Gloria
- */
 public class Disco {
-    
-    private Bloque[] bloques; 
-    private int tamañoTotal;
+    private int tamano;
+    private boolean[] bloques; // Arreglo manual para el mapa de bits
 
-    public Disco(int cantidadBloques) {
-        this.tamañoTotal = cantidadBloques;
-        this.bloques = new Bloque[cantidadBloques];
-        
-        // Inicializamos el disco vacío
-        for (int i = 0; i < cantidadBloques; i++) {
-            bloques[i] = new Bloque(i);
-        }
+    public Disco(int tamano) {
+        this.tamano = tamano;
+        this.bloques = new boolean[tamano]; // Inicializa todos en false (libre)
     }
 
-    // Método para buscar el primer bloque libre 
+    // Algoritmo First Fit: Busca el primer hueco disponible
     public int buscarBloqueLibre() {
-        for (int i = 0; i < tamañoTotal; i++) {
-            if (!bloques[i].isOcupado()) {
-                return i;
+        for (int i = 0; i < tamano; i++) {
+            if (!bloques[i]) {
+                return i; // Retorna el índice del primer bloque vacío
             }
         }
-        return -1; // Disco lleno
+        return -1; // Retorna -1 si el disco está lleno
     }
 
-    public Bloque getBloque(int id) {
-        return bloques[id];
+    // Marca un bloque como ocupado (Color Rojo en tu GUI)
+    public void ocupar(int posicion) {
+        if (posicion >= 0 && posicion < tamano) {
+            bloques[posicion] = true;
+        }
+    }
+
+    // Libera un bloque (para cuando implementes borrar archivos)
+    public void liberar(int posicion) {
+        if (posicion >= 0 && posicion < tamano) {
+            bloques[posicion] = false;
+        }
+    }
+
+    // Método vital para el dibujo de los cuadritos
+    public boolean estaOcupado(int i) {
+        if (i >= 0 && i < tamano) {
+            return bloques[i];
+        }
+        return false;
+    }
+
+    public int getTamano() {
+        return tamano;
     }
 }
-    

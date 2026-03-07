@@ -4,92 +4,39 @@
  */
 package estructuras;
 
-/**
- *
- * @author Gloria
- */
 public class Proceso {
-    private int id;
     private String nombre;
-    private String estado; // nuevo, listo, ejecutando, bloqueado, terminado
-    private int bloqueObjetivo; // El bloque del disco al que quiere ir
-    private String operacion; // READ, CREATE, UPDATE, DELETE
-    
-    public Proceso(int id, String nombre, String operacion, int bloqueObjetivo) {
-        this.id = id;
+    private int bloqueObjetivo; // El bloque en el disco donde se "escribe"
+    private String estado;      // "En Espera", "Escribiendo" o "Terminado"
+    private String operacion;   // "CREATE" (según tu imagen)
+
+    // Constructor completo
+    public Proceso(String nombre, int bloqueObjetivo, String estado) {
         this.nombre = nombre;
-        this.operacion = operacion;
         this.bloqueObjetivo = bloqueObjetivo;
-        this.estado = "nuevo";
+        this.estado = estado;
+        this.operacion = "CREATE"; // Valor por defecto visto en tu tabla
     }
 
-    /**
-     * @return the id
-     */
-    public int getId() {
-        return id;
-    }
-
-    /**
-     * @param id the id to set
-     */
-    public void setId(int id) {
-        this.id = id;
-    }
-
-    /**
-     * @return the nombre
-     */
+    // GETTERS (Muy importantes para que el Hilo sepa a dónde ir)
     public String getNombre() {
         return nombre;
     }
 
-    /**
-     * @param nombre the nombre to set
-     */
-    public void setNombre(String nombre) {
-        this.nombre = nombre;
+    public int getBloque() {
+        return bloqueObjetivo; // El cabezal usará esto para moverse
     }
 
-    /**
-     * @return the estado
-     */
     public String getEstado() {
         return estado;
     }
 
-    /**
-     * @param estado the estado to set
-     */
-    public void setEstado(String estado) {
-        this.estado = estado;
-    }
-
-    /**
-     * @return the bloqueObjetivo
-     */
-    public int getBloqueObjetivo() {
-        return bloqueObjetivo;
-    }
-
-    /**
-     * @param bloqueObjetivo the bloqueObjetivo to set
-     */
-    public void setBloqueObjetivo(int bloqueObjetivo) {
-        this.bloqueObjetivo = bloqueObjetivo;
-    }
-
-    /**
-     * @return the operacion
-     */
     public String getOperacion() {
         return operacion;
     }
 
-    /**
-     * @param operacion the operacion to set
-     */
-    public void setOperacion(String operacion) {
-        this.operacion = operacion;
+    // SETTER (Para que el hilo cambie el estado a "Terminado" al llegar)
+    public void setEstado(String estado) {
+        this.estado = estado;
     }
 }
