@@ -33,5 +33,12 @@ public class Nodo {
     public void setSiguiente(Nodo siguiente) {
         this.siguiente = siguiente;
     }
+
+    
+    
+    // Cambia esto en Nodo.java
+    public Proceso getProceso() {
+        return (Proceso) this.dato;
+    }
     
 }
