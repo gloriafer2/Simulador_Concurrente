@@ -4,39 +4,41 @@
  */
 package estructuras;
 
+/**
+ * Representa un proceso de E/S que solicita operar sobre el sistema de archivos.
+ */
 public class Proceso {
     private String nombre;
-    private int bloqueObjetivo; // El bloque en el disco donde se "escribe"
-    private String estado;      // "En Espera", "Escribiendo" o "Terminado"
-    private String operacion;   // "CREATE" (según tu imagen)
+    private int bloqueObjetivo; // Primer bloque va el cabezal
+    private int tamano;         // Cantidad de bloques que ocupa/solicita
+    private String estado;      // NUEVO, LISTO, EJECUTANDO, TERMINADO
+    private String operacion;   // CREATE, READ, UPDATE, DELETE
+    private String dueno;       // Admin o Usuario
 
-    // Constructor completo
+    // Constructor actualizado para que coincida con tu Vista
     public Proceso(String nombre, int bloqueObjetivo, String estado) {
         this.nombre = nombre;
         this.bloqueObjetivo = bloqueObjetivo;
         this.estado = estado;
-        this.operacion = "CREATE"; // Valor por defecto visto en tu tabla
+        this.tamano = 1;        // Valor por defecto
+        this.operacion = "CREATE";
+        this.dueno = "Admin";
     }
 
-    // GETTERS (Muy importantes para que el Hilo sepa a dónde ir)
-    public String getNombre() {
-        return nombre;
+    public Proceso(String nombre, int bloqueObjetivo, int tamano, String operacion, String dueno) {
+        this.nombre = nombre;
+        this.bloqueObjetivo = bloqueObjetivo;
+        this.tamano = tamano;
+        this.operacion = operacion;
+        this.dueno = dueno;
+        this.estado = "NUEVO";
     }
 
-    public int getBloque() {
-        return bloqueObjetivo; // El cabezal usará esto para moverse
-    }
-
-    public String getEstado() {
-        return estado;
-    }
-
-    public String getOperacion() {
-        return operacion;
-    }
-
-    // SETTER (Para que el hilo cambie el estado a "Terminado" al llegar)
-    public void setEstado(String estado) {
-        this.estado = estado;
-    }
+    public String getNombre() { return nombre; }
+    public int getBloque() { return bloqueObjetivo; }
+    public int getTamano() { return tamano; }
+    public String getEstado() { return estado; }
+    public void setEstado(String estado) { this.estado = estado; }
+    public String getOperacion() { return operacion; }
+    public String getDueno() { return dueno; }
 }

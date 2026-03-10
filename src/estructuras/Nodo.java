@@ -34,7 +34,10 @@ public class Nodo {
         this.siguiente = siguiente;
     }
 
-    Proceso getProceso() {
+    
+    
+    // Cambia esto en Nodo.java
+    public Proceso getProceso() {
         return (Proceso) this.dato;
     }
     
