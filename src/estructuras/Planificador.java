@@ -5,52 +5,33 @@
 package estructuras;
 
 /**
- * Encargado de decidir el orden de atención de las solicitudes de E/S.
+ *
+ * @author Gloria
  */
 public class Planificador {
-    private String algoritmoActual = "FIFO";
-    private boolean subiendo = true; // Para lógica de SCAN y C-SCAN
+    private String algoritmoActual = "FIFO"; // Por defecto
+    private int posicionCabezal = 0;
 
-    /**
-     * Selecciona el siguiente proceso de la cola según la política activa.
-     */
-    public Proceso obtenerSiguiente(ColaProcesos cola, int posCabezal) {
-        if (cola.estaVacia()) return null;
-
+    public void ejecutarPlanificacion(ColaProcesos cola) {
         switch (algoritmoActual) {
-            case "SSTF":
-                // Usamos el nombre exacto que tienes en ColaProcesos.java
-                return cola.extraerSSTF(posCabezal);
-            
-            case "SCAN":
-                return obtenerSCAN(cola, posCabezal);
-                
-            case "C-SCAN":
-                return obtenerCSCAN(cola, posCabezal);
-                
             case "FIFO":
-            default:
-                return cola.desencolar();
+                // Lógica del primero en llegar
+                break;
+            case "SSTF":
+                // Lógica del más cercano al cabezal
+                break;
+            case "SCAN":
+                // Lógica del elevador
+                break;
+            case "C-SCAN":
+                // Lógica de retorno circular
+                break;
         }
     }
 
-    private Proceso obtenerSCAN(ColaProcesos cola, int posCabezal) {
-        // En un SCAN real, buscas el más cercano en la dirección actual.
-        // Si no hay más en esa dirección, cambias 'subiendo = !subiendo'.
-        // Por ahora, para que compile, usamos SSTF como base:
-        return cola.extraerSSTF(posCabezal);
-    }
-
-    private Proceso obtenerCSCAN(ColaProcesos cola, int posCabezal) {
-        // En C-SCAN solo se atiende en una dirección y luego vuelve al inicio.
-        return cola.desencolar(); 
-    }
-
+    // Método para que el Administrador cambie el modo desde la interfaz
     public void setAlgoritmo(String nuevoAlgoritmo) {
         this.algoritmoActual = nuevoAlgoritmo;
     }
-
-    public String getAlgoritmoActual() {
-        return algoritmoActual;
-    }
+    
 }
