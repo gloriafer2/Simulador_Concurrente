@@ -5,7 +5,7 @@
 package estructuras;
 
 public class ColaProcesos {
-    private Nodo cabeza; // Tu puntero inicial
+    private Nodo cabeza;
 
     public ColaProcesos() {
         this.cabeza = null;
@@ -15,20 +15,6 @@ public class ColaProcesos {
         return cabeza == null;
     }
 
-    public Proceso verPrimero() {
-        if (estaVacia()) return null;
-        return cabeza.getProceso(); 
-    }
-
-    public Proceso desencolar() {
-        if (estaVacia()) return null;
-        
-        Proceso p = cabeza.getProceso();
-        cabeza = cabeza.getSiguiente(); // Movemos el puntero al siguiente
-        return p;
-    }
-    
-    // Método para agregar al final (si no lo tienes)
     public void encolar(Proceso nuevoProceso) {
         Nodo nuevoNodo = new Nodo(nuevoProceso);
         if (estaVacia()) {
@@ -40,5 +26,46 @@ public class ColaProcesos {
             }
             temp.setSiguiente(nuevoNodo);
         }
+    }
+
+    public Proceso desencolar() {
+        if (estaVacia()) return null;
+        Proceso p = cabeza.getProceso();
+        cabeza = cabeza.getSiguiente();
+        return p;
+    }
+
+    public Proceso extraerSSTF(int posActual) {
+        if (estaVacia()) return null;
+
+        Nodo tempActual = cabeza;
+        Nodo tempAnterior = null;
+        Nodo mejorNodo = cabeza;
+        Nodo anteriorMejor = null;
+
+        int distanciaMinima = Math.abs(cabeza.getProceso().getBloque() - posActual);
+
+        while (tempActual != null) {
+            int distanciaActual = Math.abs(tempActual.getProceso().getBloque() - posActual);
+            if (distanciaActual < distanciaMinima) {
+                distanciaMinima = distanciaActual;
+                mejorNodo = tempActual;
+                anteriorMejor = tempAnterior;
+            }
+            tempAnterior = tempActual;
+            tempActual = tempActual.getSiguiente();
+        }
+
+        if (mejorNodo == cabeza) {
+            cabeza = cabeza.getSiguiente();
+        } else {
+            anteriorMejor.setSiguiente(mejorNodo.getSiguiente());
+        }
+        return mejorNodo.getProceso();
+    }
+    
+    // Cambia esto en ColaProcesos.java
+    public Nodo getInicio() {
+        return cabeza;
     }
 }

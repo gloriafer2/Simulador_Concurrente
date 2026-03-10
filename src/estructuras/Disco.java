@@ -4,48 +4,104 @@
  */
 package estructuras;
 
+/**
+ * Clase que representa la Simulación de un Disco (SD).
+ * Implementa asignación encadenada y gestión de bloques.
+ */
 public class Disco {
     private int tamano;
-    private boolean[] bloques; // Arreglo manual para el mapa de bits
+    private Bloque[] bloques; // Arreglo de objetos Bloque para manejar punteros
 
     public Disco(int tamano) {
         this.tamano = tamano;
-        this.bloques = new boolean[tamano]; // Inicializa todos en false (libre)
+        this.bloques = new Bloque[tamano];
+        for (int i = 0; i < tamano; i++) {
+            bloques[i] = new Bloque(i); // Inicializa cada bloque con su ID
+        }
     }
 
-    // Algoritmo First Fit: Busca el primer hueco disponible
-    public int buscarBloqueLibre() {
-        for (int i = 0; i < tamano; i++) {
-            if (!bloques[i]) {
-                return i; // Retorna el índice del primer bloque vacío
+    /**
+     * Busca bloques libres y los asigna mediante una lista enlazada.
+     * Requisito: Asignación Encadenada.
+     * @param cantidad Bloques necesarios para el archivo.
+     * @param nombreArchivo Nombre del archivo dueño.
+     * @return El índice del primer bloque asignado o -1 si no hay espacio.
+     */
+    public int asignarEspacio(int cantidad, String nombreArchivo) {
+        if (contarBloquesLibres() < cantidad) {
+            return -1; // No hay espacio suficiente
+        }
+
+        int primerBloqueIndice = -1;
+        int bloqueAnteriorIndice = -1;
+        int asignados = 0;
+
+        for (int i = 0; i < tamano && asignados < cantidad; i++) {
+            if (!bloques[i].isOcupado()) {
+                // Marcar bloque como ocupado
+                bloques[i].setOcupado(true);
+                bloques[i].setNombreArchivo(nombreArchivo);
+
+                if (primerBloqueIndice == -1) {
+                    primerBloqueIndice = i; // Guardamos dónde empieza el archivo
+                }
+
+                // Si no es el primer bloque, creamos el enlace (puntero)
+                if (bloqueAnteriorIndice != -1) {
+                    bloques[bloqueAnteriorIndice].setSiguienteBloque(i);
+                }
+
+                bloqueAnteriorIndice = i;
+                asignados++;
             }
         }
-        return -1; // Retorna -1 si el disco está lleno
+        
+        // El último bloque ya tiene por defecto -1 en siguienteBloque (fin de archivo)
+        return primerBloqueIndice;
     }
 
-    // Marca un bloque como ocupado (Color Rojo en tu GUI)
-    public void ocupar(int posicion) {
-        if (posicion >= 0 && posicion < tamano) {
-            bloques[posicion] = true;
+    /**
+     * Libera los bloques de un archivo siguiendo la cadena de punteros.
+     */
+    public void eliminarArchivo(int inicio) {
+        int actual = inicio;
+        while (actual != -1) {
+            int siguiente = bloques[actual].getSiguienteBloque();
+            
+            // Limpiar el bloque actual
+            bloques[actual].setOcupado(false);
+            bloques[actual].setNombreArchivo("LIBRE");
+            bloques[actual].setSiguienteBloque(-1);
+            
+            actual = siguiente;
         }
     }
 
-    // Libera un bloque (para cuando implementes borrar archivos)
-    public void liberar(int posicion) {
-        if (posicion >= 0 && posicion < tamano) {
-            bloques[posicion] = false;
+    // --- MÉTODOS DE APOYO PARA LA VISTA ---
+
+    public int contarBloquesLibres() {
+        int libres = 0;
+        for (Bloque b : bloques) {
+            if (!b.isOcupado()) libres++;
         }
+        return libres;
     }
 
-    // Método vital para el dibujo de los cuadritos
     public boolean estaOcupado(int i) {
         if (i >= 0 && i < tamano) {
-            return bloques[i];
+            return bloques[i].isOcupado();
         }
         return false;
     }
 
     public int getTamano() {
         return tamano;
+    }
+
+    public Bloque getBloque(int i) {
+        if (i >= 0 && i < tamano) {
+            return bloques[i];
+        }
+        return null;
     }
 }
