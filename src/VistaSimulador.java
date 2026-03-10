@@ -35,7 +35,6 @@ public class VistaSimulador extends javax.swing.JFrame {
         
         iniciarPlanificador(); 
         
-        
         panelDisco.addHierarchyListener(e -> {
             if (panelDisco.isShowing()) {
                 java.awt.EventQueue.invokeLater(() -> dibujarDisco());
@@ -43,7 +42,6 @@ public class VistaSimulador extends javax.swing.JFrame {
         });
     }
 
-  
    private void iniciarPlanificador() {
     Thread hilo = new Thread(() -> {
         while (true) {
@@ -100,7 +98,6 @@ public class VistaSimulador extends javax.swing.JFrame {
                         }
                     }
 
-                    // --- 5. FINALIZACIÓN ---
                     p.setEstado("Terminado");
                     actualizarTabla();              // Desaparece de la tabla izquierda (gracias a tu filtro)
                     dibujarDisco();                 // Se redibuja el disco para ver los bloques rojos/grises
@@ -112,7 +109,6 @@ public class VistaSimulador extends javax.swing.JFrame {
                     
                     Thread.sleep(2000); // Pausa de un segundo antes de ir por el siguiente en la cola
                 } else {
-                    // Si la cola está vacía, el hilo descansa medio segundo antes de volver a preguntar
                     Thread.sleep(500); 
                 }
             } catch (Exception e) {
@@ -307,7 +303,6 @@ public class VistaSimulador extends javax.swing.JFrame {
 
     int cantidadBloques = 0;
     
-    //  Evitar que el programa explote si meten letras
     try {
         cantidadBloques = Integer.parseInt(tamanoStr);
         if (cantidadBloques <= 0) throw new NumberFormatException();
