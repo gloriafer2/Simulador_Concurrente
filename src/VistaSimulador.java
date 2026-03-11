@@ -18,14 +18,99 @@ public class VistaSimulador extends javax.swing.JFrame {
      * Creates new form VistaSimulador
      */
     public VistaSimulador() {
-        initComponents();
+        initComponents(); 
+        
+        iniciarPlanificador(); 
+        
+        panelDisco.addHierarchyListener(e -> {
+            if (panelDisco.isShowing()) {
+                java.awt.EventQueue.invokeLater(() -> dibujarDisco());
+            }
+        });
+    }
 
+   private void iniciarPlanificador() {
+    Thread hilo = new Thread(() -> {
+        while (true) {
+            try {
+                // 1. El planificador saca el siguiente proceso de la fila
+                estructuras.Proceso p = planificador.obtenerSiguiente(colaDisco, posicionCabezal);
+                
+                if (p != null) {
+                    // 2. Marcamos que el proceso ya empezó a trabajar
+                    p.setEstado("Ejecutando");
+                    actualizarTabla(); // Se ve en la tabla izquierda que ya arrancó
 
-        colaDisco = new estructuras.ColaProcesos(); 
-        miDisco = new estructuras.Disco(100);
-        planificador = new estructuras.Planificador();
-      }
+                    int destino = p.getBloque();
 
+                    // --- 3. ANIMACIÓN DEL CABEZAL ---
+                    while (posicionCabezal != destino) {
+                        if (posicionCabezal < destino) posicionCabezal++;
+                        else posicionCabezal--;
+                        
+                        dibujarDisco(); 
+                        Thread.sleep(200); // Velocidad del cuadrito verde
+                    }
+
+                    // --- 4. LLEGADA AL DESTINO (EJECUCIÓN DE LA OPERACIÓN) ---
+                    if (p.getOperacion() != null && p.getOperacion().equalsIgnoreCase("CREATE")) {
+                        // Pinta de rojo todos los bloques (Asignación Encadenada)
+                        miDisco.asignarEspacio(p.getTamano(), p.getNombre());
+                        
+                        actualizarArbol(p.getNombre());
+                        
+                        javax.swing.table.DefaultTableModel modeloAsignacion = (javax.swing.table.DefaultTableModel) jTable1.getModel();
+                        Object[] fila = new Object[] { p.getNombre(), p.getTamano(), p.getBloque(), "Rojo" };
+                        modeloAsignacion.addRow(fila);
+                        
+                    } else if (p.getOperacion() != null && p.getOperacion().equalsIgnoreCase("DELETE")) {
+                        // --- LA LÓGICA DE ELIMINAR ---
+                        
+                        // 1. Liberar los bloques en el disco (volverlos grises)
+                        for (int i = 0; i < miDisco.getTamano(); i++) {
+                            estructuras.Bloque b = miDisco.getBloque(i);
+                            if (b.isOcupado() && b.getNombreArchivo() != null && b.getNombreArchivo().equals(p.getNombre())) {
+                                b.setOcupado(false); // Lo marcamos como libre
+                                b.setNombreArchivo(null); // Le quitamos el nombre
+                            }
+                        }
+
+                        // 2. Eliminar el archivo de la Tabla de Asignación (la derecha)
+                        javax.swing.table.DefaultTableModel modeloAsignacion = (javax.swing.table.DefaultTableModel) jTable1.getModel();
+                        for (int i = 0; i < modeloAsignacion.getRowCount(); i++) {
+                            if (modeloAsignacion.getValueAt(i, 0).toString().equals(p.getNombre())) {
+                                modeloAsignacion.removeRow(i);
+                                break; // Ya lo borró, salimos del ciclo
+                            }
+                        }
+                    }
+
+                    p.setEstado("Terminado");
+                    actualizarTabla();              // Desaparece de la tabla izquierda (gracias a tu filtro)
+                    dibujarDisco();                 // Se redibuja el disco para ver los bloques rojos/grises
+                    
+                    jTable1.revalidate();
+                    jTable1.repaint();
+                    tablaProcesos.revalidate();
+                    tablaProcesos.repaint();
+                    
+                    Thread.sleep(2000); // Pausa de un segundo antes de ir por el siguiente en la cola
+                } else {
+                    Thread.sleep(500); 
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    });
+    hilo.start();
+}
+   
+   @Override
+    public void paint(java.awt.Graphics g) {
+        super.paint(g); 
+        dibujarDisco(); 
+    }
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always
@@ -159,6 +244,8 @@ public class VistaSimulador extends javax.swing.JFrame {
     private void btnCrearActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnCrearActionPerformed
         // TODO add your handling code here:
 
+    int cantidadBloques = 0;
+    
     try {
             String nombre = javax.swing.JOptionPane.showInputDialog("Nombre del archivo:");
             String sTamano = javax.swing.JOptionPane.showInputDialog("Tamaño en bloques:");
@@ -245,6 +332,7 @@ public class VistaSimulador extends javax.swing.JFrame {
     modelo.reload();
         }
         
+        String estado = p.getEstado() != null ? p.getEstado().trim() : "";
         
         
         public void dibujarDisco() {
