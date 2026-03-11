@@ -427,7 +427,6 @@ public class VistaSimulador extends javax.swing.JFrame {
     while (aux != null) {
         estructuras.Proceso p = (estructuras.Proceso) aux.getDato(); 
         
-        // Usamos trim() y equalsIgnoreCase para evitar errores por espacios o mayúsculas
         String estado = p.getEstado() != null ? p.getEstado().trim() : "";
         
         // Si el estado NO es "Terminado", lo mostramos
