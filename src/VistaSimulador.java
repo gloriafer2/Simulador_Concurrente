@@ -1,5 +1,3 @@
-
-
 /*
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
@@ -12,24 +10,13 @@
 
 
 
-import estructuras.Proceso;
-import estructuras.Nodo;
-import javax.swing.JOptionPane;
-import javax.swing.table.DefaultTableModel;
-import javax.swing.tree.DefaultMutableTreeNode;
-import javax.swing.tree.DefaultTreeModel;
-
 public class VistaSimulador extends javax.swing.JFrame {
-
-    // 2. VARIABLES GLOBALES (Deben ir justo después de "public class VistaSimulador...")
     private estructuras.Disco miDisco = new estructuras.Disco(100); 
     private estructuras.ColaProcesos colaDisco = new estructuras.ColaProcesos(); 
     private estructuras.Planificador planificador = new estructuras.Planificador();
-    private estructuras.Lista historialProcesos = new estructuras.Lista();
-    int posicionCabezal = 0; 
-    int distanciaTotal = 0; 
-
-    
+    /**
+     * Creates new form VistaSimulador
+     */
     public VistaSimulador() {
         initComponents(); 
         
@@ -141,9 +128,6 @@ public class VistaSimulador extends javax.swing.JFrame {
         cbRol = new javax.swing.JComboBox<>();
         cbPolitica = new javax.swing.JComboBox<>();
         btnCrear = new javax.swing.JButton();
-        btnEliminar = new javax.swing.JButton();
-        jScrollPane3 = new javax.swing.JScrollPane();
-        tablaProcesos = new javax.swing.JTable();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -156,11 +140,11 @@ public class VistaSimulador extends javax.swing.JFrame {
         panelDisco.setLayout(panelDiscoLayout);
         panelDiscoLayout.setHorizontalGroup(
             panelDiscoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 269, Short.MAX_VALUE)
+            .addGap(0, 149, Short.MAX_VALUE)
         );
         panelDiscoLayout.setVerticalGroup(
             panelDiscoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 202, Short.MAX_VALUE)
+            .addGap(0, 130, Short.MAX_VALUE)
         );
 
         jTable1.setModel(new javax.swing.table.DefaultTableModel(
@@ -191,12 +175,7 @@ public class VistaSimulador extends javax.swing.JFrame {
             }
         });
 
-        cbPolitica.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "FIFO", "SSTF", "SCAN", "C-SCAN" }));
-        cbPolitica.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                cbPoliticaActionPerformed(evt);
-            }
-        });
+        cbPolitica.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "FIFO", "SSTF", "SCAN" }));
 
         btnCrear.setText("Crear Archivo");
         btnCrear.addActionListener(new java.awt.event.ActionListener() {
@@ -205,62 +184,33 @@ public class VistaSimulador extends javax.swing.JFrame {
             }
         });
 
-        btnEliminar.setText("eliminar");
-        btnEliminar.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btnEliminarActionPerformed(evt);
-            }
-        });
-
-        tablaProcesos.setModel(new javax.swing.table.DefaultTableModel(
-            new Object [][] {
-                {null, null, null, null},
-                {null, null, null, null},
-                {null, null, null, null},
-                {null, null, null, null}
-            },
-            new String [] {
-                "Nombre", "Bloque", "Operacion", "Estado"
-            }
-        ) {
-            Class[] types = new Class [] {
-                java.lang.String.class, java.lang.Integer.class, java.lang.String.class, java.lang.String.class
-            };
-
-            public Class getColumnClass(int columnIndex) {
-                return types [columnIndex];
-            }
-        });
-        jScrollPane3.setViewportView(tablaProcesos);
-
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addGroup(javax.swing.GroupLayout.Alignment.LEADING, layout.createSequentialGroup()
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(layout.createSequentialGroup()
                         .addContainerGap()
                         .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 87, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                                .addGroup(layout.createSequentialGroup()
-                                    .addComponent(cbRol, javax.swing.GroupLayout.PREFERRED_SIZE, 135, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addGap(42, 42, 42)
-                                    .addComponent(cbPolitica, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addComponent(panelDisco, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                             .addGroup(layout.createSequentialGroup()
-                                .addComponent(btnCrear)
                                 .addGap(18, 18, 18)
-                                .addComponent(btnEliminar)))
-                        .addGap(0, 0, Short.MAX_VALUE))
+                                .addComponent(panelDisco, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                                .addGap(34, 34, 34)
+                                .addComponent(cbRol, javax.swing.GroupLayout.PREFERRED_SIZE, 135, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(layout.createSequentialGroup()
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 196, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addGroup(layout.createSequentialGroup()
+                                .addGap(42, 42, 42)
+                                .addComponent(cbPolitica, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))))
                     .addGroup(layout.createSequentialGroup()
-                        .addGap(30, 30, 30)
-                        .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 196, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 42, Short.MAX_VALUE)
-                        .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 196, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addContainerGap())
+                        .addGap(163, 163, 163)
+                        .addComponent(btnCrear)))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -274,17 +224,14 @@ public class VistaSimulador extends javax.swing.JFrame {
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                             .addComponent(cbRol, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                             .addComponent(cbPolitica, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                        .addGap(18, 18, 18)
-                        .addComponent(panelDisco, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addGap(8, 8, 8)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(btnCrear)
-                    .addComponent(btnEliminar))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 39, Short.MAX_VALUE)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 176, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 176, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(35, 35, 35))
+                        .addGap(57, 57, 57)
+                        .addComponent(panelDisco, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(layout.createSequentialGroup()
+                        .addGap(77, 77, 77)
+                        .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 176, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addGap(18, 18, 18)
+                .addComponent(btnCrear)
+                .addContainerGap(240, Short.MAX_VALUE))
         );
 
         pack();
@@ -295,79 +242,30 @@ public class VistaSimulador extends javax.swing.JFrame {
     }//GEN-LAST:event_cbRolActionPerformed
 
     private void btnCrearActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnCrearActionPerformed
-      String nombre = JOptionPane.showInputDialog(this, "Nombre del archivo:");
-    if (nombre == null || nombre.trim().isEmpty()) return;
-
-    String tamanoStr = JOptionPane.showInputDialog(this, "Tamaño en bloques (ej. 4):");
-    if (tamanoStr == null || tamanoStr.trim().isEmpty()) return;
+        // TODO add your handling code here:
 
     int cantidadBloques = 0;
     
     try {
-        cantidadBloques = Integer.parseInt(tamanoStr);
-        if (cantidadBloques <= 0) throw new NumberFormatException();
-    } catch (NumberFormatException e) {
-        JOptionPane.showMessageDialog(this, "Error: Por favor ingresa un número entero válido mayor a 0.");
-        return; 
-    }
+            String nombre = javax.swing.JOptionPane.showInputDialog("Nombre del archivo:");
+            String sTamano = javax.swing.JOptionPane.showInputDialog("Tamaño en bloques:");
 
-    // 1. Buscamos si hay suficientes bloques libres en TOTAL
-    int libres = 0;
-    int primerLibre = -1;
-    for (int i = 0; i < miDisco.getTamano(); i++) {
-        if (!miDisco.getBloque(i).isOcupado()) {
-            libres++;
-            if (primerLibre == -1) primerLibre = i; // Guardamos el primer bloque para el cabezal
-        }
-    }
+            if (nombre != null && sTamano != null) {
+                int tamano = Integer.parseInt(sTamano);
 
-    if (libres >= cantidadBloques) {
-        estructuras.Proceso nuevo = new estructuras.Proceso(nombre, primerLibre, cantidadBloques, "CREATE", "Admin");
-        nuevo.setEstado("En Espera");
-        
-        colaDisco.encolar(nuevo);
-        historialProcesos.insertar(nuevo);
-        actualizarTabla(); 
-    } else {
-        JOptionPane.showMessageDialog(this, "No hay espacio suficiente. Solo quedan " + libres + " bloques libres.");
-    }
+                String dueñoActual = cbRol.getSelectedItem().toString();
+                estructuras.Proceso nuevoP = new estructuras.Proceso(1, nombre, "CREATE", 0); 
 
-    }//GEN-LAST:event_btnCrearActionPerformed
+                colaDisco.encolar(nuevoP);
 
-    private void cbPoliticaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cbPoliticaActionPerformed
-   
-    }//GEN-LAST:event_cbPoliticaActionPerformed
+                planificador.ejecutarPlanificacion(colaDisco);
 
-    private void btnEliminarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnEliminarActionPerformed
-      DefaultTreeModel modeloArbol = (DefaultTreeModel) jTree1.getModel();
-        DefaultMutableTreeNode nodoSeleccionado = (DefaultMutableTreeNode) jTree1.getLastSelectedPathComponent();
-        
-        if (nodoSeleccionado == null || nodoSeleccionado.isRoot()) {
-            JOptionPane.showMessageDialog(this, "Seleccione un archivo para eliminar.");
-            return;
-        }
-
-        String nombreArchivo = nodoSeleccionado.getUserObject().toString();
-
-        int bloqueInicio = -1;
-        for (int i = 0; i < miDisco.getTamano(); i++) {
-            estructuras.Bloque b = miDisco.getBloque(i);
-            if (b != null && b.isOcupado() && b.getNombreArchivo().equals(nombreArchivo)) {
-                bloqueInicio = i;
-                break;
+                actualizarTablaYArbol();
             }
+        } catch (Exception e) {
+            javax.swing.JOptionPane.showMessageDialog(this, "Error en los datos: " + e.getMessage());
         }
-
-        if (bloqueInicio != -1) {
-            miDisco.eliminarArchivo(bloqueInicio);
-            modeloArbol.removeNodeFromParent(nodoSeleccionado);
-            
-          
-            this.repaint(); // Obliga a la ventana a actualizarse 
-            
-            JOptionPane.showMessageDialog(this, "Archivo '" + nombreArchivo + "' eliminado.");
-        }
-    }//GEN-LAST:event_btnEliminarActionPerformed
+    }//GEN-LAST:event_btnCrearActionPerformed
 
     /**
      * @param args the command line arguments
@@ -406,79 +304,62 @@ public class VistaSimulador extends javax.swing.JFrame {
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton btnCrear;
-    private javax.swing.JButton btnEliminar;
     private javax.swing.JComboBox<String> cbPolitica;
     private javax.swing.JComboBox<String> cbRol;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane2;
-    private javax.swing.JScrollPane jScrollPane3;
     private javax.swing.JTable jTable1;
     private javax.swing.JTree jTree1;
     private javax.swing.JPanel panelDisco;
-    private javax.swing.JTable tablaProcesos;
     // End of variables declaration//GEN-END:variables
 
-   private void actualizarTabla() {
-    javax.swing.table.DefaultTableModel modelo = (javax.swing.table.DefaultTableModel) tablaProcesos.getModel();
-    modelo.setRowCount(0);
-
-    estructuras.Nodo aux = historialProcesos.getInicio(); 
+        private void actualizarTablaYArbol() {
+        System.out.println("¡Proceso creado y planificado con éxito!");
+    javax.swing.table.DefaultTableModel modeloTabla = (javax.swing.table.DefaultTableModel) jTable1.getModel();
     
-    while (aux != null) {
-        estructuras.Proceso p = (estructuras.Proceso) aux.getDato(); 
+       modeloTabla.addRow(new Object[]{
+        "1",                    // ID 
+        "CREATE",               // Operación
+        "En Espera",            // Estado inicial
+        "0"                     // Bloque inicial
+    });
+    
+    dibujarDisco();
+    
+    javax.swing.tree.DefaultTreeModel modelo = (javax.swing.tree.DefaultTreeModel) jTree1.getModel();
+    javax.swing.tree.DefaultMutableTreeNode raiz = (javax.swing.tree.DefaultMutableTreeNode) modelo.getRoot();
+    raiz.add(new javax.swing.tree.DefaultMutableTreeNode("archivo_nuevo.txt"));
+    modelo.reload();
+        }
         
         String estado = p.getEstado() != null ? p.getEstado().trim() : "";
         
-        // Si el estado NO es "Terminado", lo mostramos
-        if (!estado.equalsIgnoreCase("Terminado")) {
-            Object[] fila = new Object[] {
-                p.getNombre(),    
-                p.getBloque(),    
-                p.getOperacion(),         
-                p.getEstado()     
-            };
-            modelo.addRow(fila);
+        
+        public void dibujarDisco() {
+    java.awt.Graphics g = panelDisco.getGraphics();
+    int x = 10, y = 10;
+    int tamañoCuadro = 20;
+    int espacio = 5;
+
+    for (int i = 0; i < 100; i++) {
+        
+        if (i < 5) { 
+            g.setColor(java.awt.Color.RED); 
+        } else {
+            g.setColor(java.awt.Color.LIGHT_GRAY);
         }
         
-        aux = aux.getSiguiente();
-    }
-}
-    private void actualizarArbol(String nombreArchivo) {
-        DefaultTreeModel modeloArbol = (DefaultTreeModel) jTree1.getModel();
-        DefaultMutableTreeNode raiz = (DefaultMutableTreeNode) modeloArbol.getRoot();
-        raiz.add(new DefaultMutableTreeNode(nombreArchivo));
-        modeloArbol.reload();
-    }
+        g.fillRect(x, y, tamañoCuadro, tamañoCuadro);
+        g.setColor(java.awt.Color.BLACK); // El borde
+        g.drawRect(x, y, tamañoCuadro, tamañoCuadro);
 
-    private void dibujarDisco() {
-        java.awt.Graphics g = panelDisco.getGraphics();
-        if (g == null) return;
-
-        // Limpiar fondo
-        g.setColor(java.awt.Color.WHITE);
-        g.fillRect(0, 0, panelDisco.getWidth(), panelDisco.getHeight());
-
-        int x = 10;
-        int y = 10;
-
-        for (int i = 0; i < miDisco.getTamano(); i++) {
-            if (i == posicionCabezal) {
-                g.setColor(java.awt.Color.GREEN); // Cabezal
-            } else if (miDisco.estaOcupado(i)) {
-                g.setColor(java.awt.Color.RED);   // Bloque ocupado
-            } else {
-                g.setColor(java.awt.Color.LIGHT_GRAY); // Bloque libre
-            }
-
-            g.fillRect(x, y, 20, 20); 
-            g.setColor(java.awt.Color.BLACK); 
-            g.drawRect(x, y, 20, 20);
-
-            x += 25; 
-            if ((i + 1) % 10 == 0) {
-                x = 10;
-                y += 25;
-            }
+        x += tamañoCuadro + espacio;
+        if (x > panelDisco.getWidth() - 30) {
+            x = 10;
+            y += tamañoCuadro + espacio;
         }
     }
+}
+       
+
     }
