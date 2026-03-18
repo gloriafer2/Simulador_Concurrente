@@ -673,7 +673,6 @@ public class VistaSimulador extends javax.swing.JFrame {
             }
         }
 
-        //Actualizamos el nombre visualmente en el arbolito (JTree)
         nodoSeleccionado.setUserObject(nombreNuevo);
         ((DefaultTreeModel) jTree1.getModel()).nodeChanged(nodoSeleccionado);
 
