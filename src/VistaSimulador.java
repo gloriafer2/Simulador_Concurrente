@@ -222,6 +222,7 @@ public class VistaSimulador extends javax.swing.JFrame {
         jScrollPane4 = new javax.swing.JScrollPane();
         txtJournal = new javax.swing.JTextArea();
         btnSimularFallo = new javax.swing.JButton();
+        btnRenombrar = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -329,6 +330,13 @@ public class VistaSimulador extends javax.swing.JFrame {
             }
         });
 
+        btnRenombrar.setText("Renombrar");
+        btnRenombrar.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnRenombrarActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -342,32 +350,38 @@ public class VistaSimulador extends javax.swing.JFrame {
                         .addComponent(cbRol, javax.swing.GroupLayout.PREFERRED_SIZE, 135, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(42, 42, 42)
                         .addComponent(cbPolitica, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                        .addContainerGap())
                     .addGroup(layout.createSequentialGroup()
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                         .addComponent(panelDisco, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addGroup(layout.createSequentialGroup()
-                                .addGap(41, 41, 41)
-                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                                    .addGroup(layout.createSequentialGroup()
-                                        .addGap(22, 22, 22)
-                                        .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 196, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                    .addGroup(layout.createSequentialGroup()
-                                        .addComponent(btnCargar)
-                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                        .addComponent(btnEliminar)))
-                                .addGap(58, 58, 58)
                                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 196, javax.swing.GroupLayout.PREFERRED_SIZE)
                                     .addGroup(layout.createSequentialGroup()
-                                        .addComponent(btnCrear)
-                                        .addGap(18, 18, 18)
-                                        .addComponent(btnSimularFallo))))
+                                        .addGap(41, 41, 41)
+                                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                                            .addGroup(layout.createSequentialGroup()
+                                                .addGap(22, 22, 22)
+                                                .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 196, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                            .addGroup(layout.createSequentialGroup()
+                                                .addComponent(btnCargar)
+                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                                .addComponent(btnEliminar)))
+                                        .addGap(58, 58, 58)
+                                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                            .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 196, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                            .addGroup(layout.createSequentialGroup()
+                                                .addComponent(btnCrear)
+                                                .addGap(18, 18, 18)
+                                                .addComponent(btnSimularFallo))))
+                                    .addGroup(layout.createSequentialGroup()
+                                        .addGap(125, 125, 125)
+                                        .addComponent(jScrollPane4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                                .addGap(0, 42, Short.MAX_VALUE))
                             .addGroup(layout.createSequentialGroup()
-                                .addGap(125, 125, 125)
-                                .addComponent(jScrollPane4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                        .addGap(0, 42, Short.MAX_VALUE))))
+                                .addGap(117, 117, 117)
+                                .addComponent(btnRenombrar)
+                                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -388,6 +402,8 @@ public class VistaSimulador extends javax.swing.JFrame {
                             .addComponent(btnEliminar)
                             .addComponent(btnCrear)
                             .addComponent(btnSimularFallo))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(btnRenombrar)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addComponent(jScrollPane4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addGroup(layout.createSequentialGroup()
@@ -616,6 +632,55 @@ public class VistaSimulador extends javax.swing.JFrame {
     }
     }//GEN-LAST:event_btnSimularFalloActionPerformed
 
+    private void btnRenombrarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnRenombrarActionPerformed
+        // TODO add your handling code here:
+        //Verificamos que sea Administrador
+        if (cbRol.getSelectedItem() != null && cbRol.getSelectedItem().toString().equalsIgnoreCase("Usuario")) {
+            javax.swing.JOptionPane.showMessageDialog(this, "Acceso denegado. Solo los administradores pueden renombrar archivos.");
+            return;
+        }
+
+        //Vemos qué archivo seleccionó en el JTree de la izquierda
+        DefaultMutableTreeNode nodoSeleccionado = (DefaultMutableTreeNode) jTree1.getLastSelectedPathComponent();
+        if (nodoSeleccionado == null || nodoSeleccionado.isRoot()) {
+            javax.swing.JOptionPane.showMessageDialog(this, "Por favor, selecciona un archivo en el árbol para renombrar.");
+            return;
+        }
+
+        String nombreViejo = nodoSeleccionado.getUserObject().toString();
+        
+        // Le pedimos el nuevo nombre con una ventanita
+        String nombreNuevo = javax.swing.JOptionPane.showInputDialog(this, "Ingresa el nuevo nombre para '" + nombreViejo + "':");
+
+        // Si el usuario cancela, lo deja en blanco o pone el mismo nombre, no hacemos nada
+        if (nombreNuevo == null || nombreNuevo.trim().isEmpty() || nombreNuevo.equals(nombreViejo)) {
+            return; 
+        }
+
+        // Actualizamos el nombre en los bloques del Disco Físico
+        for (int i = 0; i < miDisco.getTamano(); i++) {
+            estructuras.Bloque b = miDisco.getBloque(i);
+            if (b.isOcupado() && nombreViejo.equals(b.getNombreArchivo())) {
+                b.setNombreArchivo(nombreNuevo);
+            }
+        }
+
+        // Actualizamos el nombre en la Tabla de Asignación (la jTable1)
+        javax.swing.table.DefaultTableModel modeloAsignacion = (javax.swing.table.DefaultTableModel) jTable1.getModel();
+        for (int i = 0; i < modeloAsignacion.getRowCount(); i++) {
+            if (modeloAsignacion.getValueAt(i, 0).toString().equals(nombreViejo)) {
+                modeloAsignacion.setValueAt(nombreNuevo, i, 0); // Cambiamos solo la columna 0 (el nombre)
+            }
+        }
+
+        //Actualizamos el nombre visualmente en el arbolito (JTree)
+        nodoSeleccionado.setUserObject(nombreNuevo);
+        ((DefaultTreeModel) jTree1.getModel()).nodeChanged(nodoSeleccionado);
+
+        javax.swing.JOptionPane.showMessageDialog(this, "Archivo renombrado con éxito a: " + nombreNuevo);
+        
+    }//GEN-LAST:event_btnRenombrarActionPerformed
+
     /**
      * @param args the command line arguments
      */
@@ -655,6 +720,7 @@ public class VistaSimulador extends javax.swing.JFrame {
     private javax.swing.JButton btnCargar;
     private javax.swing.JButton btnCrear;
     private javax.swing.JButton btnEliminar;
+    private javax.swing.JButton btnRenombrar;
     private javax.swing.JButton btnSimularFallo;
     private javax.swing.JComboBox<String> cbPolitica;
     private javax.swing.JComboBox<String> cbRol;
