@@ -612,10 +612,10 @@ public class VistaSimulador extends javax.swing.JFrame {
 
     if (ultimoPendiente > ultimoConfirmada) {
         
-        // 1. CORTAMOS LA LUZ (Detiene el cabezal verde)
+        // Detiene el cabezal verde)
         falloActivo = true;
         
-        // 2. Vaciamos la cola para cancelar las demás operaciones en espera
+        // Vaciamos la cola para cancelar las demás operaciones en espera
         colaDisco = new estructuras.ColaProcesos(); 
         
         javax.swing.JOptionPane.showMessageDialog(this, 
@@ -634,7 +634,7 @@ public class VistaSimulador extends javax.swing.JFrame {
 
     private void btnRenombrarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnRenombrarActionPerformed
         // TODO add your handling code here:
-        //Verificamos que sea Administrador
+        //Verificamos que sea Admin
         if (cbRol.getSelectedItem() != null && cbRol.getSelectedItem().toString().equalsIgnoreCase("Usuario")) {
             javax.swing.JOptionPane.showMessageDialog(this, "Acceso denegado. Solo los administradores pueden renombrar archivos.");
             return;
