@@ -29,6 +29,7 @@ public class VistaSimulador extends javax.swing.JFrame {
     int posicionCabezal = 0; 
     int distanciaTotal = 0; 
     volatile boolean falloActivo = false;
+    volatile boolean cargandoJson = false; // <--- NUEVA VARIABLE PARA EL CANDADO
     
 
     
@@ -50,7 +51,10 @@ public class VistaSimulador extends javax.swing.JFrame {
             try {
                 
                 String politicaElegida = cbPolitica.getSelectedItem().toString();
-                planificador.setAlgoritmo(politicaElegida);
+                if (!politicaElegida.equals(planificador.getAlgoritmoActual())) {
+                    planificador.setAlgoritmo(politicaElegida);
+                }
+
                 //  El planificador saca el siguiente proceso de la fila
                 estructuras.Proceso p = planificador.obtenerSiguiente(colaDisco, posicionCabezal);
                 
@@ -464,7 +468,14 @@ public class VistaSimulador extends javax.swing.JFrame {
     }//GEN-LAST:event_btnCrearActionPerformed
 
     private void cbPoliticaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cbPoliticaActionPerformed
-   
+        if (planificador != null && cbPolitica.getSelectedItem() != null) {
+            String nuevaPolitica = cbPolitica.getSelectedItem().toString();
+            
+            if (!nuevaPolitica.equals(planificador.getAlgoritmoActual())) {
+                planificador.setAlgoritmo(nuevaPolitica);
+                System.out.println("Política actualizada a: " + nuevaPolitica);
+            }
+        }
     }//GEN-LAST:event_cbPoliticaActionPerformed
 
     private void btnEliminarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnEliminarActionPerformed
@@ -477,7 +488,6 @@ public class VistaSimulador extends javax.swing.JFrame {
 
     String nombreArchivo = nodoSeleccionado.getUserObject().toString();
 
-    // 1. Buscamos en qué bloque empieza ese archivo para que el cabezal sepa a dónde ir
     int bloqueInicio = -1;
     int tamano = 0;
     for (int i = 0; i < miDisco.getTamano(); i++) {
@@ -488,9 +498,7 @@ public class VistaSimulador extends javax.swing.JFrame {
         }
     }
 
-    // 2. Si lo encontramos, CREAMOS UN PROCESO DE ELIMINACIÓN
     if (bloqueInicio != -1) {
-        // Importante: No borramos aquí. Lo metemos en la cola
         estructuras.Proceso pEliminar = new estructuras.Proceso(nombreArchivo, bloqueInicio, tamano, "DELETE", "Admin");
         pEliminar.setEstado("En Espera");
         
@@ -508,70 +516,75 @@ public class VistaSimulador extends javax.swing.JFrame {
     }//GEN-LAST:event_btnEliminarActionPerformed
 
     private void btnCargarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnCargarActionPerformed
-        // 1. Abrimos el buscador de archivos de Windows
-     javax.swing.JFileChooser selector = new javax.swing.JFileChooser();
-     selector.setDialogTitle("Selecciona el JSON de la prueba");
+     // 1. Abrimos el buscador de archivos de Windows
+        javax.swing.JFileChooser selector = new javax.swing.JFileChooser();
+        selector.setDialogTitle("Selecciona el JSON de la prueba");
 
-     if (selector.showOpenDialog(this) == javax.swing.JFileChooser.APPROVE_OPTION) {
-         java.io.File archivo = selector.getSelectedFile();
+        if (selector.showOpenDialog(this) == javax.swing.JFileChooser.APPROVE_OPTION) {
+            java.io.File archivo = selector.getSelectedFile();
 
-         try {
-             // 2. Leemos el texto del archivo
-             String contenido = new String(java.nio.file.Files.readAllBytes(archivo.toPath()));
+            try {
+                String contenido = new String(java.nio.file.Files.readAllBytes(archivo.toPath()));
 
-             // 3. Convierto el texto a un Objeto JSON 
-             org.json.JSONObject json = new org.json.JSONObject(contenido);
+                // 3. Convierto el texto a un Objeto JSON 
+                org.json.JSONObject json = new org.json.JSONObject(contenido);
 
-             reiniciarSimulador(); 
+                reiniciarSimulador(); 
 
-             // A) Posición inicial del cabezal
-             posicionCabezal = json.getInt("initial_head");
+                // === NUEVO: 1. CERRAMOS LA PUERTA (El planificador se pausa) ===
+                cargandoJson = true; 
 
-             // B) Cargar los System Files
-             org.json.JSONObject systemFiles = json.getJSONObject("system_files");
-             for (String keyPos : systemFiles.keySet()) {
-                 int posInicio = Integer.parseInt(keyPos);
-                 org.json.JSONObject data = systemFiles.getJSONObject(keyPos);
-                 cargarSystemFile(data.getString("name"), posInicio, data.getInt("blocks"));
-             }
+                posicionCabezal = json.getInt("initial_head");
 
-             // C) Cargar las solicitudes (Requests para la cola)
-             org.json.JSONArray requests = json.getJSONArray("requests");
-             for (int i = 0; i < requests.length(); i++) {
-                 org.json.JSONObject req = requests.getJSONObject(i);
-                 int pos = req.getInt("pos");
-                 String op = req.getString("op");
+                //  Cargar los System Files
+                org.json.JSONObject systemFiles = json.getJSONObject("system_files");
+                for (String keyPos : systemFiles.keySet()) {
+                    int posInicio = Integer.parseInt(keyPos);
+                    org.json.JSONObject data = systemFiles.getJSONObject(keyPos);
+                    cargarSystemFile(data.getString("name"), posInicio, data.getInt("blocks"));
+                }
 
-                 // Busco el nombre del archivo en esa posición para que la cola se vea bien
-                 String nombreArchivo = "Nuevo_" + pos;
-                 int tamano = 1;
+                //  Cargar las solicitudes (Requests para la cola)
+                org.json.JSONArray requests = json.getJSONArray("requests");
+                for (int i = 0; i < requests.length(); i++) {
+                    org.json.JSONObject req = requests.getJSONObject(i);
+                    int pos = req.getInt("pos");
+                    String op = req.getString("op");
 
-                 estructuras.Bloque b = miDisco.getBloque(pos);
-                 if (b != null && b.isOcupado() && b.getNombreArchivo() != null) {
-                     nombreArchivo = b.getNombreArchivo();
-                     // Contamos bloques del archivo
-                     tamano = 0;
-                     for(int j = 0; j < miDisco.getTamano(); j++) {
-                         if(miDisco.getBloque(j).getNombreArchivo() != null && miDisco.getBloque(j).getNombreArchivo().equals(nombreArchivo)) {
-                             tamano++;
-                         }
-                     }
-                 }
-                 encolarSolicitud(nombreArchivo, pos, tamano, op);
-             }
+                    // Busco el nombre del archivo en esa posición para que la cola se vea bien
+                    String nombreArchivo = "Nuevo_" + pos;
+                    int tamano = 1;
 
-             // 4. Actualizar toda la interfaz
-             actualizarTabla();
-             dibujarDisco();
-             this.repaint();
+                    estructuras.Bloque b = miDisco.getBloque(pos);
+                    if (b != null && b.isOcupado() && b.getNombreArchivo() != null) {
+                        nombreArchivo = b.getNombreArchivo();
+                        tamano = 0;
+                        for(int j = 0; j < miDisco.getTamano(); j++) {
+                            if(miDisco.getBloque(j).getNombreArchivo() != null && miDisco.getBloque(j).getNombreArchivo().equals(nombreArchivo)) {
+                                tamano++;
+                            }
+                        }
+                    }
+                    encolarSolicitud(nombreArchivo, pos, tamano, op);
+                }
 
-            javax.swing.JOptionPane.showMessageDialog(this, "Prueba cargada desde: " + archivo.getName());
+                actualizarTabla();
+                dibujarDisco();
+                this.repaint();
 
-         } catch (Exception e) {
-             javax.swing.JOptionPane.showMessageDialog(this, "Error al cargar: " + e.getMessage());
-             e.printStackTrace();
-         }
-     }
+                //  ABRIMOS LA PUERTA (El planificador ya puede ver la fila completa) ===
+                cargandoJson = false; 
+
+                javax.swing.JOptionPane.showMessageDialog(this, "Prueba cargada desde: " + archivo.getName());
+
+            } catch (Exception e) {
+                // Por si acaso hay un error, abrimos la puerta para no trancar el programa
+                cargandoJson = false; 
+                javax.swing.JOptionPane.showMessageDialog(this, "Error al cargar: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+    
     }//GEN-LAST:event_btnCargarActionPerformed
 
     private void btnSimularFalloActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSimularFalloActionPerformed
