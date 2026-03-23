@@ -21,7 +21,7 @@ import javax.swing.tree.DefaultTreeModel;
 
 public class VistaSimulador extends javax.swing.JFrame {
 
-    // 2. VARIABLES GLOBALES (Deben ir justo después de "public class VistaSimulador...")
+   
     private estructuras.Disco miDisco = new estructuras.Disco(250); 
     private estructuras.ColaProcesos colaDisco = new estructuras.ColaProcesos(); 
     private estructuras.Planificador planificador = new estructuras.Planificador();
@@ -29,7 +29,7 @@ public class VistaSimulador extends javax.swing.JFrame {
     int posicionCabezal = 0; 
     int distanciaTotal = 0; 
     volatile boolean falloActivo = false;
-    volatile boolean cargandoJson = false; // <--- NUEVA VARIABLE PARA EL CANDADO
+    volatile boolean cargandoJson = false; 
     
 
     
@@ -45,192 +45,286 @@ public class VistaSimulador extends javax.swing.JFrame {
         });
     }
     
-    private void iniciarPlanificador() {
+   private void iniciarPlanificador() {
         Thread hilo = new Thread(() -> {
             while (true) {
                 try {
-                    
                     String politicaElegida = cbPolitica.getSelectedItem().toString();
                     if (!politicaElegida.equals(planificador.getAlgoritmoActual())) {
                         planificador.setAlgoritmo(politicaElegida);
                     }
 
-                    // El planificador saca el siguiente proceso de la fila
                     estructuras.Proceso p = planificador.obtenerSiguiente(colaDisco, posicionCabezal);
                     
                     if (p != null) {
-                        // 2. Marcamos que el proceso ya empezó a trabajar
-                        p.setEstado("Ejecutando");
-                        actualizarTabla(); // Se ve en la tabla izquierda que ya arrancó
+                        
+                        boolean candadoObtenido = false;
+                        estructuras.Bloque primerBloque = null;
+                        
+                        if (p.getOperacion().equalsIgnoreCase("CREATE")) {
+                            candadoObtenido = true; 
+                        } else {
+                            primerBloque = miDisco.getBloque(p.getBloque());
+                            if (primerBloque != null) {
+                                if (p.getOperacion().equalsIgnoreCase("READ")) {
+                                    if (primerBloque.getTipoLock().equals("LIBRE") || primerBloque.getTipoLock().equals("LECTURA")) {
+                                        primerBloque.setTipoLock("LECTURA");
+                                        primerBloque.agregarLector();
+                                        candadoObtenido = true;
+                                    }
+                                } else if (p.getOperacion().equalsIgnoreCase("UPDATE")) {
+                                    if (primerBloque.getTipoLock().equals("LIBRE")) {
+                                        primerBloque.setTipoLock("ACTUALIZANDO");
+                                        candadoObtenido = true;
+                                    }
+                                } else if (p.getOperacion().equalsIgnoreCase("DELETE")) {
+                                    if (primerBloque.getTipoLock().equals("LIBRE")) {
+                                        primerBloque.setTipoLock("ELIMINANDO");
+                                        candadoObtenido = true;
+                                    }
+                                }
+                            }
+                        }
 
-                        // Solo registro operaciones críticas (CREATE o DELETE)
-                        if (p.getOperacion().equalsIgnoreCase("CREATE") || p.getOperacion().equalsIgnoreCase("DELETE")) {
+                        if (!candadoObtenido) {
+                            p.setEstado("Bloqueado");
+                            actualizarTabla();
+                            colaDisco.encolar(p); 
+                            Thread.sleep(800); 
+                            continue; 
+                        }
+
+                        p.setEstado("Ejecutando");
+                        actualizarTabla(); 
+                        actualizarTablaLocks(); 
+
+                        if (p.getOperacion().equalsIgnoreCase("CREATE") || p.getOperacion().equalsIgnoreCase("DELETE") || p.getOperacion().equalsIgnoreCase("UPDATE")) {
                             escribirJournal(p.getOperacion(), p.getNombre(), "PENDIENTE");
                         }
 
                         int destino = p.getBloque();
-
-                        // ANIMACIÓN DEL CABEZAL
                         while (posicionCabezal != destino) {
+                            if (falloActivo) break; 
                             if (posicionCabezal < destino) posicionCabezal++;
                             else posicionCabezal--;
-                            
                             dibujarDisco(); 
-                            Thread.sleep(300); // Velocidad del cuadrito verde
+                            Thread.sleep(300); 
                         }
                         
-                        //  MANEJO DEL FALLO (UNDO REAL) 
+                        // Si falla antes de empezar a trabajar
                         if (falloActivo) {
-                            falloActivo = false; // Reseteamos el switch eléctrico
-                            p.setEstado("ABORTADO"); // Reflejamos el UNDO en la tabla
+                            falloActivo = false; 
+                            p.setEstado("ABORTADO"); 
+                            if (primerBloque != null) {
+                                if (p.getOperacion().equalsIgnoreCase("READ")) primerBloque.quitarLector();
+                                else primerBloque.setTipoLock("LIBRE");
+                            }
                             actualizarTabla();
-                            
+                            actualizarTablaLocks();
                             continue; 
                         }
 
-                        // LLEGADA AL DESTINO (EJECUCIÓN DE LA OPERACIÓN) 
+                        
+                        
                         if (p.getOperacion() != null && p.getOperacion().equalsIgnoreCase("CREATE")) {
-                            
-                            // ANIMACIÓN DE ESCRITURA: BLOQUE POR BLOQUE
                             int bloquesEscritos = 0;
                             for (int i = 0; i < miDisco.getTamano() && bloquesEscritos < p.getTamano(); i++) {
-                                if (falloActivo) break; // 
-
+                                if (falloActivo) break; 
                                 estructuras.Bloque b = miDisco.getBloque(i);
                                 if (!b.isOcupado()) {
-                                    // 1. Mueve el cabezal al bloque libre
                                     while (posicionCabezal != i) {
                                         if (falloActivo) break;
                                         if (posicionCabezal < i) posicionCabezal++;
                                         else posicionCabezal--;
                                         dibujarDisco();
-                                        Thread.sleep(50); // Velocidad buscando el espacio
+                                        Thread.sleep(50); 
                                     }
                                     if (falloActivo) break;
 
-                                    // 2. Pinta de rojo 
                                     b.setOcupado(true);
                                     b.setNombreArchivo(p.getNombre());
+                                    
+                                    if (bloquesEscritos == 0) {
+                                        b.setTipoLock("CREANDO"); 
+                                        primerBloque = b; 
+                                    }
+                                    
                                     dibujarDisco();
                                     bloquesEscritos++;
-                                    
                                     Thread.sleep(400); 
                                 }
                             }
 
+                            // UNDO DEL CREATE
                             if (falloActivo) {
-                                falloActivo = false; 
-                                
-                                // UNDO REAL: Limpiamos los cuadritos rojos que quedaron a medias
                                 for (int i = 0; i < miDisco.getTamano(); i++) {
                                     estructuras.Bloque b = miDisco.getBloque(i);
                                     if (b.isOcupado() && p.getNombre().equals(b.getNombreArchivo())) {
                                         b.setOcupado(false);
                                         b.setNombreArchivo(null);
+                                        b.setTipoLock("LIBRE");
                                     }
                                 }
-                                
-                                p.setEstado("ABORTADO");
-                                actualizarTabla();
-                                dibujarDisco();
-                                continue; // Aborto la misión y paso al siguiente archivo
+                            } else {
+                                actualizarArbol(p.getNombre());
+                                javax.swing.table.DefaultTableModel modeloAsignacion = (javax.swing.table.DefaultTableModel) jTable1.getModel();
+                                modeloAsignacion.addRow(new Object[] { p.getNombre(), p.getTamano(), p.getBloque(), "Creando 🔴" });
                             }
-
-                            // Si no hubo fallo y terminó de escribir todo
-                            actualizarArbol(p.getNombre());
-                            javax.swing.table.DefaultTableModel modeloAsignacion = (javax.swing.table.DefaultTableModel) jTable1.getModel();
-                            modeloAsignacion.addRow(new Object[] { p.getNombre(), p.getTamano(), p.getBloque(), "Rojo" });
-                            
-                        } else if (p.getOperacion() != null && p.getOperacion().equalsIgnoreCase("DELETE")) {
-        
-                            // 1. Liberar los bloques en el disco (volverlos grises) UNO POR UNO
+                        } 
+                        else if (p.getOperacion() != null && p.getOperacion().equalsIgnoreCase("READ")) {
                             for (int i = 0; i < miDisco.getTamano(); i++) {
+                                if (falloActivo) break; 
                                 estructuras.Bloque b = miDisco.getBloque(i);
                                 if (b.isOcupado() && b.getNombreArchivo() != null && b.getNombreArchivo().equals(p.getNombre())) {
-
-                                    // ANIMACIÓN DE CABEZAL AL BORRAR
                                     while (posicionCabezal != i) {
+                                        if (falloActivo) break; 
                                         if (posicionCabezal < i) posicionCabezal++;
                                         else posicionCabezal--;
                                         dibujarDisco();
-                                        Thread.sleep(50); // Velocidad del cabezal buscando el bloque
+                                        Thread.sleep(50); 
                                     }
-
-                                    // Libero el bloque y cambia a gris
-                                    b.setOcupado(false);
-                                    b.setNombreArchivo(null);
-                                    dibujarDisco(); 
-
-                                    Thread.sleep(400); // Pausa para que se note cómo se apaga cada bloque
+                                    if (falloActivo) break; 
+                                    Thread.sleep(200); 
                                 }
                             }
-                            
-                            
-
-                            // 2. Eliminar el archivo de la Tabla de asignacion (AHORA ES SEGURO CONTRA NULLS)
-                            try {
-                                javax.swing.table.DefaultTableModel modeloAsignacion = (javax.swing.table.DefaultTableModel) jTable1.getModel();
-                                for (int i = 0; i < modeloAsignacion.getRowCount(); i++) {
-                                    Object valorFila = modeloAsignacion.getValueAt(i, 0); // Obtenemos el valor primero
-                                    
-                                    // Verificamos que la fila NO esté vacía antes de intentar leer su nombre
-                                    if (valorFila != null && valorFila.toString().equals(p.getNombre())) {
-                                        modeloAsignacion.removeRow(i);
-                                        break; 
-                                    }
-                                }
-                            } catch (Exception e) {
-                                System.out.println("Error menor ignorado al limpiar tabla: " + e.getMessage());
-                            }
-                            
                         }
-                        
-                        else if (p.getOperacion() != null && p.getOperacion().equalsIgnoreCase("UPDATE")) {
-                            
-                         // La versión blindada contra errores:
-                         String[] nombres = p.getNombre().split("->");
-                         String nombreViejo = nombres[0];
-                         // Si tiene "->", usamos el nombre nuevo. Si no (ej. si viene del JSON), mantenemos el mismo nombre.
-                         String nombreNuevo = (nombres.length > 1) ? nombres[1] : nombreViejo;
-                            // Renombramos físicamente en el disco
+                        else if (p.getOperacion() != null && p.getOperacion().equalsIgnoreCase("DELETE")) {
                             for (int i = 0; i < miDisco.getTamano(); i++) {
+                                if (falloActivo) break; 
+                                estructuras.Bloque b = miDisco.getBloque(i);
+                                if (b.isOcupado() && b.getNombreArchivo() != null && b.getNombreArchivo().equals(p.getNombre())) {
+                                    while (posicionCabezal != i) {
+                                        if (falloActivo) break; 
+                                        if (posicionCabezal < i) posicionCabezal++;
+                                        else posicionCabezal--;
+                                        dibujarDisco();
+                                        Thread.sleep(50); 
+                                    }
+                                    if (falloActivo) break; 
+                                    
+                                    // TRUCO DE UNDO
+                                    b.setOcupado(false); 
+                                    dibujarDisco(); 
+                                    Thread.sleep(400); 
+                                }
+                            }
+                            
+                            // UNDO DEL DELETE 
+                            if (falloActivo) {
+                                for (int i = 0; i < miDisco.getTamano(); i++) {
+                                    estructuras.Bloque b = miDisco.getBloque(i);
+                                    if (!b.isOcupado() && p.getNombre().equals(b.getNombreArchivo())) {
+                                        b.setOcupado(true); // Vuelven a ser rojos
+                                    }
+                                }
+                            } else {
+                                // Si terminó bien
+                                for (int i = 0; i < miDisco.getTamano(); i++) {
+                                    estructuras.Bloque b = miDisco.getBloque(i);
+                                    if (p.getNombre().equals(b.getNombreArchivo())) {
+                                        b.setNombreArchivo(null);
+                                        b.setTipoLock("LIBRE");
+                                    }
+                                }
+                                // Limpiamos las tablas y el arbolito
+                                try {
+                                    javax.swing.table.DefaultTableModel modeloAsignacion = (javax.swing.table.DefaultTableModel) jTable1.getModel();
+                                    for (int i = 0; i < modeloAsignacion.getRowCount(); i++) {
+                                        Object valorFila = modeloAsignacion.getValueAt(i, 0); 
+                                        if (valorFila != null && valorFila.toString().equals(p.getNombre())) {
+                                            modeloAsignacion.removeRow(i);
+                                            break; 
+                                        }
+                                    }
+                                } catch (Exception e) { }
+                                
+                                try {
+                                    javax.swing.tree.DefaultTreeModel modeloArbol = (javax.swing.tree.DefaultTreeModel) jTree1.getModel();
+                                    javax.swing.tree.DefaultMutableTreeNode raiz = (javax.swing.tree.DefaultMutableTreeNode) modeloArbol.getRoot();
+                                    if (raiz != null) {
+                                        java.util.Enumeration<javax.swing.tree.TreeNode> enumNodos = raiz.breadthFirstEnumeration();
+                                        while (enumNodos.hasMoreElements()) {
+                                            javax.swing.tree.DefaultMutableTreeNode nodo = (javax.swing.tree.DefaultMutableTreeNode) enumNodos.nextElement();
+                                            if (nodo.getUserObject().toString().equals(p.getNombre())) {
+                                                modeloArbol.removeNodeFromParent(nodo);
+                                                break;
+                                            }
+                                        }
+                                    }
+                                } catch (Exception e) { }
+                            }
+                        }
+                        else if (p.getOperacion() != null && p.getOperacion().equalsIgnoreCase("UPDATE")) {
+                            String[] nombres = p.getNombre().split("->");
+                            String nombreViejo = nombres[0];
+                            String nombreNuevo = (nombres.length > 1) ? nombres[1] : nombreViejo;
+
+                            for (int i = 0; i < miDisco.getTamano(); i++) {
+                                if (falloActivo) break; 
                                 estructuras.Bloque b = miDisco.getBloque(i);
                                 if (b.isOcupado() && b.getNombreArchivo() != null && b.getNombreArchivo().equals(nombreViejo)) {
                                     b.setNombreArchivo(nombreNuevo);
                                 }
                             }
-                            Thread.sleep(500); // Pausa visual simulando escritura
-
-                            // Actualizamos la tabla de Asignación
-                            try {
-                                javax.swing.table.DefaultTableModel modeloAsignacion = (javax.swing.table.DefaultTableModel) jTable1.getModel();
-                                for (int i = 0; i < modeloAsignacion.getRowCount(); i++) {
-                                    Object valorFila = modeloAsignacion.getValueAt(i, 0);
-                                    if (valorFila != null && valorFila.toString().equals(nombreViejo)) {
-                                        modeloAsignacion.setValueAt(nombreNuevo, i, 0); 
+                            
+                            // UNDO DEL UPDATE 
+                            if (falloActivo) {
+                                for (int i = 0; i < miDisco.getTamano(); i++) {
+                                    estructuras.Bloque b = miDisco.getBloque(i);
+                                    if (b.isOcupado() && b.getNombreArchivo() != null && b.getNombreArchivo().equals(nombreNuevo)) {
+                                        b.setNombreArchivo(nombreViejo);
                                     }
                                 }
-                            } catch (Exception e) { }
+                            } else {
+                                Thread.sleep(500); 
+                                try {
+                                    javax.swing.table.DefaultTableModel modeloAsignacion = (javax.swing.table.DefaultTableModel) jTable1.getModel();
+                                    for (int i = 0; i < modeloAsignacion.getRowCount(); i++) {
+                                        Object valorFila = modeloAsignacion.getValueAt(i, 0);
+                                        if (valorFila != null && valorFila.toString().equals(nombreViejo)) {
+                                            modeloAsignacion.setValueAt(nombreNuevo, i, 0); 
+                                        }
+                                    }
+                                } catch (Exception e) { }
 
-                            // Actualizamos el JTree
-                            javax.swing.tree.DefaultTreeModel modeloArbol = (javax.swing.tree.DefaultTreeModel) jTree1.getModel();
-                            javax.swing.tree.DefaultMutableTreeNode raiz = (javax.swing.tree.DefaultMutableTreeNode) modeloArbol.getRoot();
-                            java.util.Enumeration<javax.swing.tree.TreeNode> e = raiz.breadthFirstEnumeration();
-                            while (e.hasMoreElements()) {
-                                javax.swing.tree.DefaultMutableTreeNode nodo = (javax.swing.tree.DefaultMutableTreeNode) e.nextElement();
-                                if (nodo.getUserObject().toString().equals(nombreViejo)) {
-                                    nodo.setUserObject(nombreNuevo);
-                                    modeloArbol.nodeChanged(nodo);
-                                    break;
-                                }
+                                try {
+                                    javax.swing.tree.DefaultTreeModel modeloArbol = (javax.swing.tree.DefaultTreeModel) jTree1.getModel();
+                                    javax.swing.tree.DefaultMutableTreeNode raiz = (javax.swing.tree.DefaultMutableTreeNode) modeloArbol.getRoot();
+                                    if (raiz != null) {
+                                        java.util.Enumeration<javax.swing.tree.TreeNode> enumNodos = raiz.breadthFirstEnumeration();
+                                        while (enumNodos.hasMoreElements()) {
+                                            javax.swing.tree.DefaultMutableTreeNode nodo = (javax.swing.tree.DefaultMutableTreeNode) enumNodos.nextElement();
+                                            if (nodo.getUserObject().toString().equals(nombreViejo)) {
+                                                nodo.setUserObject(nombreNuevo);
+                                                modeloArbol.nodeChanged(nodo);
+                                                break;
+                                            }
+                                        }
+                                    }
+                                } catch (Exception e) {}
                             }
                         }
+
+                       
+                        if (falloActivo) {
+                            falloActivo = false; 
+                            p.setEstado("ABORTADO"); 
+                            if (primerBloque != null) {
+                                if (p.getOperacion().equalsIgnoreCase("READ")) primerBloque.quitarLector();
+                                else primerBloque.setTipoLock("LIBRE");
+                            }
+                            actualizarTabla();
+                            actualizarTablaLocks();
+                            dibujarDisco();
+                            continue; 
+                        }
                         
-                        // ==========================================
-                        // CIERRE COMÚN PARA TODAS LAS OPERACIONES
-                        // ==========================================
-                        
-                        // REGISTRO CONFIRMADA EN EL JOURNAL
+                        if (p.getOperacion().equalsIgnoreCase("READ")) {
+                            if (primerBloque != null) primerBloque.quitarLector();
+                        } else {
+                            if (primerBloque != null) primerBloque.setTipoLock("LIBRE");
+                        }
+
                         if (p.getOperacion().equalsIgnoreCase("CREATE") || p.getOperacion().equalsIgnoreCase("DELETE") || p.getOperacion().equalsIgnoreCase("UPDATE")) {
                             escribirJournal(p.getOperacion(), p.getNombre(), "CONFIRMADA (Commit)");
                         }
@@ -238,14 +332,11 @@ public class VistaSimulador extends javax.swing.JFrame {
                         p.setEstado("Terminado");
                         actualizarTabla();              
                         dibujarDisco();                 
+                        actualizarTablaLocks(); 
                         
                         try {
                             jTable1.revalidate();
                             jTable1.repaint();
-                            if (tablaProcesos != null) {
-                                tablaProcesos.revalidate();
-                                tablaProcesos.repaint();
-                            }
                         } catch (Exception e) {}
                         
                         Thread.sleep(2000); 
@@ -259,8 +350,6 @@ public class VistaSimulador extends javax.swing.JFrame {
         });
         hilo.start();
     }
-                        
-                        
                           
 
    
@@ -295,9 +384,11 @@ public class VistaSimulador extends javax.swing.JFrame {
         btnSimularFallo = new javax.swing.JButton();
         btnRenombrar = new javax.swing.JButton();
         btnCarpeta = new javax.swing.JButton();
+        btnLeer = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
+        jTree1.setBackground(new java.awt.Color(153, 153, 153));
         jScrollPane1.setViewportView(jTree1);
 
         panelDisco.setBackground(new java.awt.Color(153, 153, 153));
@@ -307,11 +398,11 @@ public class VistaSimulador extends javax.swing.JFrame {
         panelDisco.setLayout(panelDiscoLayout);
         panelDiscoLayout.setHorizontalGroup(
             panelDiscoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 500, Short.MAX_VALUE)
+            .addGap(0, 519, Short.MAX_VALUE)
         );
         panelDiscoLayout.setVerticalGroup(
             panelDiscoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 416, Short.MAX_VALUE)
+            .addGap(0, 597, Short.MAX_VALUE)
         );
 
         jTable1.setModel(new javax.swing.table.DefaultTableModel(
@@ -322,7 +413,7 @@ public class VistaSimulador extends javax.swing.JFrame {
                 {null, null, null, null}
             },
             new String [] {
-                "Archivo", "Bloques", "Inicio", "Color"
+                "Archivo", "Bloques", "Inicio", "Estado Lock"
             }
         ) {
             Class[] types = new Class [] {
@@ -391,7 +482,9 @@ public class VistaSimulador extends javax.swing.JFrame {
             }
         });
 
+        txtJournal.setBackground(new java.awt.Color(204, 204, 204));
         txtJournal.setColumns(20);
+        txtJournal.setForeground(new java.awt.Color(0, 153, 153));
         txtJournal.setRows(5);
         jScrollPane4.setViewportView(txtJournal);
 
@@ -416,115 +509,123 @@ public class VistaSimulador extends javax.swing.JFrame {
             }
         });
 
+        btnLeer.setText("Leer");
+        btnLeer.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnLeerActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 87, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 202, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
-                        .addGap(30, 30, 30)
-                        .addComponent(cbRol, javax.swing.GroupLayout.PREFERRED_SIZE, 135, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(42, 42, 42)
-                        .addComponent(cbPolitica, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addContainerGap())
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(cbRol, javax.swing.GroupLayout.PREFERRED_SIZE, 171, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(115, 115, 115)
+                        .addComponent(cbPolitica, javax.swing.GroupLayout.PREFERRED_SIZE, 191, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(273, 273, 273))
                     .addGroup(layout.createSequentialGroup()
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(panelDisco, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addGroup(layout.createSequentialGroup()
+                                .addGap(30, 30, 30)
+                                .addComponent(panelDisco, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                                     .addGroup(layout.createSequentialGroup()
-                                        .addGap(41, 41, 41)
-                                        .addComponent(btnCargar)
-                                        .addGap(54, 54, 54)
-                                        .addComponent(btnEliminar)
-                                        .addGap(34, 34, 34))
-                                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                        .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 281, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                        .addGap(18, 18, 18)))
-                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addGroup(layout.createSequentialGroup()
-                                        .addGap(24, 24, 24)
-                                        .addComponent(btnCrear)
                                         .addGap(18, 18, 18)
-                                        .addComponent(btnSimularFallo)
-                                        .addGap(0, 0, Short.MAX_VALUE))
-                                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                        .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 325, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                        .addContainerGap())))
+                                        .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 423, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                        .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 337, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                    .addGroup(layout.createSequentialGroup()
+                                        .addGap(109, 109, 109)
+                                        .addComponent(jScrollPane4, javax.swing.GroupLayout.PREFERRED_SIZE, 522, javax.swing.GroupLayout.PREFERRED_SIZE))))
                             .addGroup(layout.createSequentialGroup()
-                                .addGap(117, 117, 117)
+                                .addGap(588, 588, 588)
                                 .addComponent(btnRenombrar)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addGap(18, 18, 18)
+                                .addComponent(btnLeer)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(btnCargar)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(btnSimularFallo)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(btnCarpeta)
-                                .addGap(107, 107, 107))
-                            .addGroup(layout.createSequentialGroup()
-                                .addGap(132, 132, 132)
-                                .addComponent(jScrollPane4, javax.swing.GroupLayout.PREFERRED_SIZE, 310, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addContainerGap())))))
+                                .addGap(18, 18, 18)
+                                .addComponent(btnEliminar)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(btnCrear)))
+                        .addContainerGap(1236, Short.MAX_VALUE))))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
-                .addGap(14, 14, 14)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(cbRol, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(cbPolitica, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
-                        .addGap(49, 49, 49)
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 176, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 176, javax.swing.GroupLayout.PREFERRED_SIZE))
-                        .addGap(34, 34, 34)
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                            .addComponent(btnCargar)
-                            .addComponent(btnEliminar)
-                            .addComponent(btnCrear)
-                            .addComponent(btnSimularFallo))
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                            .addComponent(btnRenombrar)
-                            .addComponent(btnCarpeta))
-                        .addGap(26, 26, 26)
-                        .addComponent(jScrollPane4, javax.swing.GroupLayout.PREFERRED_SIZE, 151, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 466, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(0, 0, Short.MAX_VALUE))
                     .addGroup(layout.createSequentialGroup()
-                        .addGap(18, 18, 18)
-                        .addComponent(panelDisco, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addGap(0, 0, Short.MAX_VALUE))
-            .addGroup(layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 275, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(231, 348, Short.MAX_VALUE))
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(cbPolitica, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(cbRol, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(layout.createSequentialGroup()
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 26, Short.MAX_VALUE)
+                                .addComponent(panelDisco, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addGroup(layout.createSequentialGroup()
+                                .addGap(89, 89, 89)
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                                    .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 198, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 207, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                    .addComponent(btnRenombrar)
+                                    .addComponent(btnLeer)
+                                    .addComponent(btnCargar)
+                                    .addComponent(btnSimularFallo)
+                                    .addComponent(btnCarpeta)
+                                    .addComponent(btnEliminar)
+                                    .addComponent(btnCrear))
+                                .addGap(35, 35, 35)
+                                .addComponent(jScrollPane4, javax.swing.GroupLayout.PREFERRED_SIZE, 151, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(72, 72, 72)))))
+                .addContainerGap())
         );
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
     private void cbRolActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cbRolActionPerformed
-                // TODO add your handling code here:
-           String rol = cbRol.getSelectedItem().toString();
+          String rol = cbRol.getSelectedItem().toString();
         
         if (rol.equalsIgnoreCase("Usuario")) {
-            // Modo Usuario: Solo lectura. Bloqueamos botones críticos.
+            // Modo Usuario: Solo lectura. Bloqueamos TODOS los botones críticos.
             btnCrear.setEnabled(false);
             btnEliminar.setEnabled(false);
-            btnCargar.setEnabled(false); 
-            JOptionPane.showMessageDialog(this, "Modo Usuario activado: Permisos restringidos a solo lectura.");
+            btnCargar.setEnabled(false);
+            btnSimularFallo.setEnabled(false); 
+            btnRenombrar.setEnabled(false);    
+            btnCarpeta.setEnabled(false); 
+            btnLeer.setEnabled(true);
+            
+            javax.swing.JOptionPane.showMessageDialog(this, "Modo Usuario activado: Permisos restringidos a solo lectura.");
         } else {
             // Modo Administrador: Desbloqueamos todo.
             btnCrear.setEnabled(true);
             btnEliminar.setEnabled(true);
             btnCargar.setEnabled(true);
-            
+            btnSimularFallo.setEnabled(true); 
+            btnRenombrar.setEnabled(true);    
+            btnCarpeta.setEnabled(true);   
+            btnLeer.setEnabled(true);
         }
         
-        // Obligamos a Java a redibujar los cuadritos rojos y grises inmediatamente
+        // Obligamos a Java a redibujar los cuadritos
         dibujarDisco(); 
         this.repaint();
                 
@@ -580,24 +681,41 @@ public class VistaSimulador extends javax.swing.JFrame {
     }//GEN-LAST:event_cbPoliticaActionPerformed
 
     private void btnEliminarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnEliminarActionPerformed
-      javax.swing.tree.DefaultMutableTreeNode nodoSeleccionado = (javax.swing.tree.DefaultMutableTreeNode) jTree1.getLastSelectedPathComponent();
-    
-    if (nodoSeleccionado == null || nodoSeleccionado.isRoot()) {
-        javax.swing.JOptionPane.showMessageDialog(this, "Por favor, selecciona un archivo o directorio en el árbol para eliminar.");
-        return;
-    }
+        javax.swing.tree.DefaultMutableTreeNode nodoSeleccionado = (javax.swing.tree.DefaultMutableTreeNode) jTree1.getLastSelectedPathComponent();
 
-    // 1. Ejecutamos el borrado en cascada (encola todos los archivos internos)
-    encolarEliminacionRecursiva(nodoSeleccionado);
+        if (nodoSeleccionado == null || nodoSeleccionado.isRoot()) {
+            javax.swing.JOptionPane.showMessageDialog(this, "Por favor, selecciona un archivo o directorio en el árbol para eliminar.");
+            return;
+        }
 
-    // 2. Destruimos la carpeta (o archivo) visualmente del JTree de un solo golpe
-    javax.swing.tree.DefaultTreeModel modeloArbol = (javax.swing.tree.DefaultTreeModel) jTree1.getModel();
-    modeloArbol.removeNodeFromParent(nodoSeleccionado);
-    
-    // 3. Refrescamos la UI para ver las solicitudes en la tabla
-    actualizarTabla(); 
-    
-    javax.swing.JOptionPane.showMessageDialog(this, "Solicitud de eliminación en cascada enviada a la cola de E/S.");
+        String nombreElemento = nodoSeleccionado.getUserObject().toString();
+
+        // Averiguamos si es un archivo físico buscando si tiene bloques en el disco
+        boolean esArchivo = false;
+        for (int i = 0; i < miDisco.getTamano(); i++) {
+            estructuras.Bloque b = miDisco.getBloque(i);
+            if (b.isOcupado() && b.getNombreArchivo() != null && b.getNombreArchivo().equals(nombreElemento)) {
+                esArchivo = true;
+                break;
+            }
+        }
+
+        // 1. Encolamos la eliminación 
+        encolarEliminacionRecursiva(nodoSeleccionado);
+
+        // 2. Control visual en el JTree según si es archivo o carpeta
+        if (esArchivo) {
+            // Si es archivo, NO lo borramos del JTree todavía. ¡El Planificador lo borrará en vivo!
+            javax.swing.JOptionPane.showMessageDialog(this, "Archivo enviado a la cola de E/S para ser eliminado.");
+        } else {
+            // Si es carpeta, la desaparecemos visualmente de inmediato para limpiar la pantalla
+            javax.swing.tree.DefaultTreeModel modeloArbol = (javax.swing.tree.DefaultTreeModel) jTree1.getModel();
+            modeloArbol.removeNodeFromParent(nodoSeleccionado);
+            javax.swing.JOptionPane.showMessageDialog(this, "Carpeta y su contenido encolados para eliminación.");
+        }
+
+        actualizarTabla();
+
     }//GEN-LAST:event_btnEliminarActionPerformed
     
     private void encolarEliminacionRecursiva(javax.swing.tree.DefaultMutableTreeNode nodo) {
@@ -650,7 +768,6 @@ public class VistaSimulador extends javax.swing.JFrame {
 
                 reiniciarSimulador(); 
 
-                // === NUEVO: 1. CERRAMOS LA PUERTA (El planificador se pausa) ===
                 cargandoJson = true; 
 
                 posicionCabezal = json.getInt("initial_head");
@@ -691,7 +808,6 @@ public class VistaSimulador extends javax.swing.JFrame {
                 dibujarDisco();
                 this.repaint();
 
-                //  ABRIMOS LA PUERTA (El planificador ya puede ver la fila completa) ===
                 cargandoJson = false; 
 
                 javax.swing.JOptionPane.showMessageDialog(this, "Prueba cargada desde: " + archivo.getName());
@@ -718,8 +834,7 @@ public class VistaSimulador extends javax.swing.JFrame {
         // Detiene el cabezal verde)
         falloActivo = true;
         
-        // Vaciamos la cola para cancelar las demás operaciones en espera
-        colaDisco = new estructuras.ColaProcesos(); 
+         
         
         javax.swing.JOptionPane.showMessageDialog(this, 
             "¡APAGÓN! El sistema se detuvo en medio del viaje.\nAplicando UNDO: Operación descartada para proteger el disco.", 
@@ -768,14 +883,12 @@ public class VistaSimulador extends javax.swing.JFrame {
         return; 
     }
 
-    // Si es una carpeta (no tiene bloques en el disco físico), la renombramos de inmediato
     if (bloqueInicio == -1) {
         nodoSeleccionado.setUserObject(nombreNuevo);
         ((javax.swing.tree.DefaultTreeModel) jTree1.getModel()).nodeChanged(nodoSeleccionado);
         return;
     }
 
-    // 5. Si es un archivo real, ENCOLAMOS EL PROCESO (El truco: guardamos viejo->nuevo)
     String nombreCombinado = nombreViejo + "->" + nombreNuevo;
     estructuras.Proceso pActualizar = new estructuras.Proceso(nombreCombinado, bloqueInicio, tamano, "UPDATE", "Admin");
     pActualizar.setEstado("En Espera");
@@ -821,45 +934,93 @@ public class VistaSimulador extends javax.swing.JFrame {
 
         javax.swing.tree.DefaultTreeModel modeloArbol = (javax.swing.tree.DefaultTreeModel) jTree1.getModel();
         
-        // ¡LA LÍNEA MÁGICA! 
-        // Obliga al JTree a preguntar si "permite hijos" para decidir el icono, en vez de fijarse si está vacía
         modeloArbol.setAsksAllowsChildren(true); 
 
-        // 5. Agregamos la carpeta al modelo visual del árbol
         modeloArbol.insertNodeInto(nuevaCarpeta, nodoPadre, nodoPadre.getChildCount());
-        // 6. Desplegamos la carpeta padre para que el usuario vea su nueva creación inmediatamente
         jTree1.expandPath(new javax.swing.tree.TreePath(nodoPadre.getPath()));
 
-        // Mensaje de éxito
         javax.swing.JOptionPane.showMessageDialog(this, "Carpeta '" + nombreCarpeta + "' creada con éxito.");
     }//GEN-LAST:event_btnCarpetaActionPerformed
+
+    private void btnLeerActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLeerActionPerformed
+        // TODO add your handling code here:
+        // en el JTree
+        javax.swing.tree.DefaultMutableTreeNode nodoSeleccionado = (javax.swing.tree.DefaultMutableTreeNode) jTree1.getLastSelectedPathComponent();
+        if (nodoSeleccionado == null || nodoSeleccionado.isRoot()) {
+            javax.swing.JOptionPane.showMessageDialog(this, "Por favor, selecciona un archivo en el árbol para leer.");
+            return;
+        }
+
+        String nombreArchivo = nodoSeleccionado.getUserObject().toString();
+
+        // 2. Buscamos el archivo en el disco para ver dónde empieza y cuánto pesa
+        int bloqueInicio = -1;
+        int tamano = 0;
+        for (int i = 0; i < miDisco.getTamano(); i++) {
+            estructuras.Bloque b = miDisco.getBloque(i);
+            if (b.isOcupado() && nombreArchivo.equals(b.getNombreArchivo())) {
+                if (bloqueInicio == -1) bloqueInicio = i;
+                tamano++;
+            }
+        }
+
+        // 3. Validamos si es una carpeta (no tiene bloques físicos)
+        if (bloqueInicio == -1) {
+            javax.swing.JOptionPane.showMessageDialog(this, "Has seleccionado una carpeta. Por favor, selecciona un archivo para leer.");
+            return;
+        }
+
+        // 4. Encolamos la operación READ
+        String duenoActual = cbRol.getSelectedItem().toString(); // Sabemos quién lo manda
+        estructuras.Proceso pLeer = new estructuras.Proceso(nombreArchivo, bloqueInicio, tamano, "READ", duenoActual);
+        pLeer.setEstado("En Espera");
+        
+        colaDisco.encolar(pLeer);
+        historialProcesos.insertar(pLeer);
+        actualizarTabla(); // Mostramos que entró a la fila
+    }//GEN-LAST:event_btnLeerActionPerformed
 
     /**
      * @param args the command line arguments
      */
     public static void main(String args[]) {
-        /* Set the Nimbus look and feel */
-        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
-        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
-         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
-         */
+        /* Configuración del Tema Oscuro (Dark Mode) */
         try {
+            // Colores base del Dark Mode
+            java.awt.Color fondoPrincipal = new java.awt.Color(34, 40, 49);
+            java.awt.Color fondoPaneles = new java.awt.Color(49, 54, 63);
+            java.awt.Color textoBlanco = new java.awt.Color(238, 238, 238);
+            
+            javax.swing.UIManager.put("Panel.background", fondoPrincipal);
+            javax.swing.UIManager.put("OptionPane.background", fondoPrincipal);
+            javax.swing.UIManager.put("OptionPane.messageForeground", textoBlanco);
+            
+            // Botones
+            javax.swing.UIManager.put("Button.background", new java.awt.Color(118, 171, 174));
+            javax.swing.UIManager.put("Button.foreground", java.awt.Color.BLACK);
+            
+            // Tablas
+            javax.swing.UIManager.put("Table.background", fondoPaneles);
+            javax.swing.UIManager.put("Table.foreground", textoBlanco);
+            javax.swing.UIManager.put("TableHeader.background", new java.awt.Color(20, 25, 30));
+            javax.swing.UIManager.put("TableHeader.foreground", textoBlanco);
+            javax.swing.UIManager.put("ScrollPane.background", fondoPrincipal);
+            
+            javax.swing.UIManager.put("Tree.background", fondoPaneles);
+            javax.swing.UIManager.put("Tree.textForeground", textoBlanco);
+            javax.swing.UIManager.put("TextArea.background", fondoPaneles);
+            javax.swing.UIManager.put("TextArea.foreground", textoBlanco);
+            javax.swing.UIManager.put("Label.foreground", textoBlanco);
+            
             for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
                 if ("Nimbus".equals(info.getName())) {
                     javax.swing.UIManager.setLookAndFeel(info.getClassName());
                     break;
                 }
             }
-        } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(VistaSimulador.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(VistaSimulador.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(VistaSimulador.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(VistaSimulador.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (Exception ex) {
+            ex.printStackTrace();
         }
-        //</editor-fold>
 
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
@@ -874,6 +1035,7 @@ public class VistaSimulador extends javax.swing.JFrame {
     private javax.swing.JButton btnCarpeta;
     private javax.swing.JButton btnCrear;
     private javax.swing.JButton btnEliminar;
+    private javax.swing.JButton btnLeer;
     private javax.swing.JButton btnRenombrar;
     private javax.swing.JButton btnSimularFallo;
     private javax.swing.JComboBox<String> cbPolitica;
@@ -914,6 +1076,36 @@ public class VistaSimulador extends javax.swing.JFrame {
         aux = aux.getSiguiente();
     }
 }
+   private void actualizarTablaLocks() {
+        try {
+            javax.swing.table.DefaultTableModel modeloAsignacion = (javax.swing.table.DefaultTableModel) jTable1.getModel();
+            for (int i = 0; i < modeloAsignacion.getRowCount(); i++) {
+                Object nombreObj = modeloAsignacion.getValueAt(i, 0);
+                if (nombreObj != null) {
+                    String nombreArchivo = nombreObj.toString();
+                    
+                    for (int j = 0; j < miDisco.getTamano(); j++) {
+                        estructuras.Bloque b = miDisco.getBloque(j);
+                        if (b.isOcupado() && nombreArchivo.equals(b.getNombreArchivo())) {
+                            
+                            String estadoLock = "Libre 🟢";
+                            String tipo = b.getTipoLock();
+                            
+                            if (tipo.equals("LECTURA")) estadoLock = "Leyendo (" + b.getLectoresActivos() + ") 📖";
+                            else if (tipo.equals("CREANDO") || tipo.equals("ESCRITURA")) estadoLock = "Creando 🔴";
+                            else if (tipo.equals("ACTUALIZANDO")) estadoLock = "Actualizando 🟠";
+                            else if (tipo.equals("ELIMINANDO")) estadoLock = "Eliminando ⚫";
+                            
+                            modeloAsignacion.setValueAt(estadoLock, i, 3); 
+                            break;
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {}
+    }
+   
+   
    private void actualizarArbol(String nombreArchivo) {
     javax.swing.tree.DefaultTreeModel modeloArbol = (javax.swing.tree.DefaultTreeModel) jTree1.getModel();
     
@@ -932,48 +1124,72 @@ public class VistaSimulador extends javax.swing.JFrame {
     // 2. Creamos el nodo visual
     javax.swing.tree.DefaultMutableTreeNode nuevoArchivo = new javax.swing.tree.DefaultMutableTreeNode(nombreArchivo);
     
-    // ¡LA MAGIA! Le prohibimos tener hijos para que salga con icono de hojita
     nuevoArchivo.setAllowsChildren(false); 
 
-    // 3. Lo agregamos a la carpeta correcta
     nodoDestino.add(nuevoArchivo);
     
-    // 4. Refrescamos el árbol visualmente
     modeloArbol.reload();
 }
 
     private void dibujarDisco() {
-        java.awt.Graphics g = panelDisco.getGraphics();
-        if (g == null) return;
+        if (panelDisco.getWidth() <= 0 || panelDisco.getHeight() <= 0) return;
 
-        // Limpiar fondo
-        g.setColor(java.awt.Color.WHITE);
+        
+        java.awt.image.BufferedImage lienzoInvisible = new java.awt.image.BufferedImage(
+            panelDisco.getWidth(), panelDisco.getHeight(), java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        
+        java.awt.Graphics2D g = lienzoInvisible.createGraphics();
+
+        // Suavizado para bordes HD
+        g.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+
+        // Fondo oscuro
+        g.setColor(new java.awt.Color(49, 54, 63));
         g.fillRect(0, 0, panelDisco.getWidth(), panelDisco.getHeight());
 
-        int x = 5; // Margen izquierdo más pequeño
-        int y = 5; // Margen superior más pequeño
+        int x = 10; 
+        int y = 10; 
+        int tamanoCuadro = 28; 
 
+        // Dibujamos todos los cuadritos en el lienzo invisible
         for (int i = 0; i < miDisco.getTamano(); i++) {
+            estructuras.Bloque bloque = miDisco.getBloque(i);
+
             if (i == posicionCabezal) {
-                g.setColor(java.awt.Color.GREEN); // Cabezal
-            } else if (miDisco.estaOcupado(i)) {
-                g.setColor(java.awt.Color.RED);   // Bloque ocupado
+                g.setColor(new java.awt.Color(0, 255, 127)); // Cabezal verde
+            } else if (bloque.isOcupado()) {
+                int hash = Math.abs(bloque.getNombreArchivo().hashCode());
+                int r = (hash & 0xFF0000) >> 16;
+                int gr = (hash & 0x00FF00) >> 8;
+                int b = hash & 0x0000FF;
+                g.setColor(new java.awt.Color(Math.max(r, 100), Math.max(gr, 100), Math.max(b, 100))); 
             } else {
-                g.setColor(java.awt.Color.LIGHT_GRAY); // Bloque libre
+                g.setColor(new java.awt.Color(70, 75, 85)); // Libre
             }
 
-            // Cuadritos de 12x12 píxeles
-            g.fillRect(x, y, 12, 12); 
-            g.setColor(java.awt.Color.BLACK); 
-            g.drawRect(x, y, 12, 12);
+            g.fillRoundRect(x, y, tamanoCuadro, tamanoCuadro, 8, 8); 
 
-            x += 15; // Espacio entre cuadritos
+            g.setColor(java.awt.Color.WHITE);
+            g.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 10));
+            String numero = String.format("%02d", i);
+            g.drawString(numero, x + 5, y + 18);
+
+            x += tamanoCuadro + 5; 
             
-            // Cuando llegue a 25 cuadritos en la fila, baja a la siguiente línea
-            if ((i + 1) % 25 == 0) {
-                x = 5;
-                y += 15;
+            if ((i + 1) % 15 == 0) {
+                x = 10;
+                y += tamanoCuadro + 5;
             }
+        }
+        
+        g.dispose(); // Soltamos el pincel del lienzo invisible
+
+       
+        // ==========================================
+        java.awt.Graphics gPantalla = panelDisco.getGraphics();
+        if (gPantalla != null) {
+            gPantalla.drawImage(lienzoInvisible, 0, 0, null);
+            gPantalla.dispose();
         }
     }
     
