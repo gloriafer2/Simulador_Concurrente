@@ -36,6 +36,102 @@ public class VistaSimulador extends javax.swing.JFrame {
     public VistaSimulador() {
         initComponents(); 
         
+        // ==========================================
+        // APLICAR RENDERIZADOR MODERNO AL JTREE
+        // ==========================================
+        if (jTree1 != null) {
+            jTree1.setCellRenderer(new ModernTreeRenderer());
+        }
+        
+    
+        if (lblMetricas != null) {
+            lblMetricas.setOpaque(true); 
+            lblMetricas.setBackground(new java.awt.Color(34, 40, 49)); 
+            lblMetricas.setForeground(new java.awt.Color(0, 255, 127)); 
+            lblMetricas.setFont(new java.awt.Font("Consolas", java.awt.Font.BOLD, 14)); 
+            
+            lblMetricas.setBorder(javax.swing.BorderFactory.createCompoundBorder(
+                javax.swing.BorderFactory.createLineBorder(new java.awt.Color(70, 75, 85), 1), 
+                javax.swing.BorderFactory.createEmptyBorder(8, 15, 8, 15) 
+            ));
+        }
+        
+        
+        
+        panelDisco.addHierarchyListener(e -> {
+            if (panelDisco.isShowing()) {
+                java.awt.EventQueue.invokeLater(() -> dibujarDisco());
+            }
+        });
+        
+        java.awt.Color fondoPaneles = new java.awt.Color(49, 54, 63);
+        java.awt.Color textoBlanco = new java.awt.Color(238, 238, 238);
+        java.awt.Color headerTabla = new java.awt.Color(34, 40, 49); // Cabecera más oscura para que resalte
+
+        // 1. Árbol (Este te quedó perfecto)
+        if (jTree1 != null) {
+            jTree1.setBackground(fondoPaneles);
+        }
+
+        // 2. Tabla de Asignación (Izquierda)
+        if (jTable1 != null) {
+            jTable1.setBackground(fondoPaneles);
+            jTable1.setForeground(textoBlanco);
+            jTable1.setGridColor(new java.awt.Color(70, 75, 85)); // Líneas de división sutiles
+            jTable1.getTableHeader().setBackground(headerTabla);
+            jTable1.getTableHeader().setForeground(textoBlanco);
+            if (jTable1.getParent() instanceof javax.swing.JViewport) {
+                ((javax.swing.JViewport) jTable1.getParent()).setBackground(fondoPaneles);
+            }
+        }
+
+        // 3. Tabla de Procesos (Derecha)
+        if (tablaProcesos != null) {
+            tablaProcesos.setBackground(fondoPaneles);
+            tablaProcesos.setForeground(textoBlanco);
+            tablaProcesos.setGridColor(new java.awt.Color(70, 75, 85));
+            tablaProcesos.getTableHeader().setBackground(headerTabla);
+            tablaProcesos.getTableHeader().setForeground(textoBlanco);
+            // EL TRUCO MAGICO PARA EL FONDO VACÍO:
+            if (tablaProcesos.getParent() instanceof javax.swing.JViewport) {
+                ((javax.swing.JViewport) tablaProcesos.getParent()).setBackground(fondoPaneles);
+            }
+        }
+        
+        
+        // 4. Pintar el Cuadro de Texto del Journal (Abajo)
+        // Nota: Asegúrate de que tu variable se llame jTextArea1 o cámbiala por el nombre real
+        if (jTable1 != null) {
+            jTable1.setBackground(fondoPaneles);
+            jTable1.setForeground(textoBlanco);
+        }
+   
+        javax.swing.table.DefaultTableCellRenderer headerRenderer = new javax.swing.table.DefaultTableCellRenderer();
+        headerRenderer.setBackground(new java.awt.Color(34, 40, 49)); // Fondo oscuro para cabecera
+        headerRenderer.setForeground(new java.awt.Color(238, 238, 238)); // Letra blanca
+        headerRenderer.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 12)); // Letra en negrita
+        headerRenderer.setBorder(javax.swing.BorderFactory.createEtchedBorder());
+
+        // Aplicamos el arreglo a la tabla de la izquierda
+        if (jTable1 != null) {
+            for (int i = 0; i < jTable1.getColumnModel().getColumnCount(); i++) {
+                jTable1.getColumnModel().getColumn(i).setHeaderRenderer(headerRenderer);
+            }
+        }
+
+        // Aplicamos el arreglo a la tabla de la derecha
+        if (tablaProcesos != null) {
+            for (int i = 0; i < tablaProcesos.getColumnModel().getColumnCount(); i++) {
+                tablaProcesos.getColumnModel().getColumn(i).setHeaderRenderer(headerRenderer);
+            }
+        }
+        if (jTable1 != null) {
+            jTable1.setBackground(new java.awt.Color(34, 40, 49)); // Fondo bien oscuro
+            jTable1.setForeground(new java.awt.Color(0, 255, 127)); // Letra verde terminal
+            jTable1.setFont(new java.awt.Font("Consolas", java.awt.Font.PLAIN, 12));
+        }
+        
+        
         iniciarPlanificador(); 
         
         panelDisco.addHierarchyListener(e -> {
@@ -45,7 +141,8 @@ public class VistaSimulador extends javax.swing.JFrame {
         });
     }
     
-   private void iniciarPlanificador() {
+    
+    private void iniciarPlanificador() {
         Thread hilo = new Thread(() -> {
             while (true) {
                 try {
@@ -107,11 +204,19 @@ public class VistaSimulador extends javax.swing.JFrame {
                             if (falloActivo) break; 
                             if (posicionCabezal < destino) posicionCabezal++;
                             else posicionCabezal--;
+                            distanciaTotal++; 
+                            
+                            final int cabezalActual = posicionCabezal;
+                            final int distActual = distanciaTotal;
+                            javax.swing.SwingUtilities.invokeLater(() -> {
+                                if (lblMetricas != null) {
+                                    lblMetricas.setText("Cabezal: " + cabezalActual + " | Distancia Total: " + distActual);
+                                }
+                            });
                             dibujarDisco(); 
                             Thread.sleep(300); 
                         }
                         
-                        // Si falla antes de empezar a trabajar
                         if (falloActivo) {
                             falloActivo = false; 
                             p.setEstado("ABORTADO"); 
@@ -124,8 +229,6 @@ public class VistaSimulador extends javax.swing.JFrame {
                             continue; 
                         }
 
-                        
-                        
                         if (p.getOperacion() != null && p.getOperacion().equalsIgnoreCase("CREATE")) {
                             int bloquesEscritos = 0;
                             for (int i = 0; i < miDisco.getTamano() && bloquesEscritos < p.getTamano(); i++) {
@@ -136,6 +239,15 @@ public class VistaSimulador extends javax.swing.JFrame {
                                         if (falloActivo) break;
                                         if (posicionCabezal < i) posicionCabezal++;
                                         else posicionCabezal--;
+                                        distanciaTotal++; 
+                            
+                                        final int cabezalActual = posicionCabezal;
+                                        final int distActual = distanciaTotal;
+                                        javax.swing.SwingUtilities.invokeLater(() -> {
+                                            if (lblMetricas != null) {
+                                                lblMetricas.setText("Cabezal: " + cabezalActual + " | Distancia Total: " + distActual);
+                                            }
+                                        });
                                         dibujarDisco();
                                         Thread.sleep(50); 
                                     }
@@ -155,7 +267,6 @@ public class VistaSimulador extends javax.swing.JFrame {
                                 }
                             }
 
-                            // UNDO DEL CREATE
                             if (falloActivo) {
                                 for (int i = 0; i < miDisco.getTamano(); i++) {
                                     estructuras.Bloque b = miDisco.getBloque(i);
@@ -180,6 +291,16 @@ public class VistaSimulador extends javax.swing.JFrame {
                                         if (falloActivo) break; 
                                         if (posicionCabezal < i) posicionCabezal++;
                                         else posicionCabezal--;
+                                        distanciaTotal++; 
+
+                                        final int cabezalActual = posicionCabezal;
+                                        final int distActual = distanciaTotal;
+                                        javax.swing.SwingUtilities.invokeLater(() -> {
+                                            if (lblMetricas != null) {
+                                                lblMetricas.setText("Cabezal: " + cabezalActual + " | Distancia Total: " + distActual);
+                                            }
+                                        });
+                                        
                                         dibujarDisco();
                                         Thread.sleep(50); 
                                     }
@@ -197,28 +318,35 @@ public class VistaSimulador extends javax.swing.JFrame {
                                         if (falloActivo) break; 
                                         if (posicionCabezal < i) posicionCabezal++;
                                         else posicionCabezal--;
+                                        distanciaTotal++; 
+                            
+                                        final int cabezalActual = posicionCabezal;
+                                        final int distActual = distanciaTotal;
+                                        javax.swing.SwingUtilities.invokeLater(() -> {
+                                            if (lblMetricas != null) {
+                                                lblMetricas.setText("Cabezal: " + cabezalActual + " | Distancia Total: " + distActual);
+                                            }
+                                        });
+                                        
                                         dibujarDisco();
                                         Thread.sleep(50); 
                                     }
                                     if (falloActivo) break; 
                                     
-                                    // TRUCO DE UNDO
                                     b.setOcupado(false); 
                                     dibujarDisco(); 
                                     Thread.sleep(400); 
                                 }
                             }
                             
-                            // UNDO DEL DELETE 
                             if (falloActivo) {
                                 for (int i = 0; i < miDisco.getTamano(); i++) {
                                     estructuras.Bloque b = miDisco.getBloque(i);
                                     if (!b.isOcupado() && p.getNombre().equals(b.getNombreArchivo())) {
-                                        b.setOcupado(true); // Vuelven a ser rojos
+                                        b.setOcupado(true);
                                     }
                                 }
                             } else {
-                                // Si terminó bien
                                 for (int i = 0; i < miDisco.getTamano(); i++) {
                                     estructuras.Bloque b = miDisco.getBloque(i);
                                     if (p.getNombre().equals(b.getNombreArchivo())) {
@@ -226,7 +354,6 @@ public class VistaSimulador extends javax.swing.JFrame {
                                         b.setTipoLock("LIBRE");
                                     }
                                 }
-                                // Limpiamos las tablas y el arbolito
                                 try {
                                     javax.swing.table.DefaultTableModel modeloAsignacion = (javax.swing.table.DefaultTableModel) jTable1.getModel();
                                     for (int i = 0; i < modeloAsignacion.getRowCount(); i++) {
@@ -242,13 +369,9 @@ public class VistaSimulador extends javax.swing.JFrame {
                                     javax.swing.tree.DefaultTreeModel modeloArbol = (javax.swing.tree.DefaultTreeModel) jTree1.getModel();
                                     javax.swing.tree.DefaultMutableTreeNode raiz = (javax.swing.tree.DefaultMutableTreeNode) modeloArbol.getRoot();
                                     if (raiz != null) {
-                                        java.util.Enumeration<javax.swing.tree.TreeNode> enumNodos = raiz.breadthFirstEnumeration();
-                                        while (enumNodos.hasMoreElements()) {
-                                            javax.swing.tree.DefaultMutableTreeNode nodo = (javax.swing.tree.DefaultMutableTreeNode) enumNodos.nextElement();
-                                            if (nodo.getUserObject().toString().equals(p.getNombre())) {
-                                                modeloArbol.removeNodeFromParent(nodo);
-                                                break;
-                                            }
+                                        javax.swing.tree.DefaultMutableTreeNode nodoAEditar = buscarNodoRecursivo(raiz, p.getNombre());
+                                        if (nodoAEditar != null) {
+                                            modeloArbol.removeNodeFromParent(nodoAEditar);
                                         }
                                     }
                                 } catch (Exception e) { }
@@ -267,7 +390,6 @@ public class VistaSimulador extends javax.swing.JFrame {
                                 }
                             }
                             
-                            // UNDO DEL UPDATE 
                             if (falloActivo) {
                                 for (int i = 0; i < miDisco.getTamano(); i++) {
                                     estructuras.Bloque b = miDisco.getBloque(i);
@@ -291,14 +413,10 @@ public class VistaSimulador extends javax.swing.JFrame {
                                     javax.swing.tree.DefaultTreeModel modeloArbol = (javax.swing.tree.DefaultTreeModel) jTree1.getModel();
                                     javax.swing.tree.DefaultMutableTreeNode raiz = (javax.swing.tree.DefaultMutableTreeNode) modeloArbol.getRoot();
                                     if (raiz != null) {
-                                        java.util.Enumeration<javax.swing.tree.TreeNode> enumNodos = raiz.breadthFirstEnumeration();
-                                        while (enumNodos.hasMoreElements()) {
-                                            javax.swing.tree.DefaultMutableTreeNode nodo = (javax.swing.tree.DefaultMutableTreeNode) enumNodos.nextElement();
-                                            if (nodo.getUserObject().toString().equals(nombreViejo)) {
-                                                nodo.setUserObject(nombreNuevo);
-                                                modeloArbol.nodeChanged(nodo);
-                                                break;
-                                            }
+                                        javax.swing.tree.DefaultMutableTreeNode nodoAEditar = buscarNodoRecursivo(raiz, nombreViejo);
+                                        if (nodoAEditar != null) {
+                                            nodoAEditar.setUserObject(nombreNuevo);
+                                            modeloArbol.nodeChanged(nodoAEditar);
                                         }
                                     }
                                 } catch (Exception e) {}
@@ -344,12 +462,35 @@ public class VistaSimulador extends javax.swing.JFrame {
                         Thread.sleep(500); 
                     }
                 } catch (Exception e) {
-                    e.printStackTrace();
                 }
             }
         });
         hilo.start();
     }
+    
+    private javax.swing.tree.DefaultMutableTreeNode buscarNodoRecursivo(javax.swing.tree.DefaultMutableTreeNode nodoActual, String nombreBuscado) {
+        if (nodoActual.getUserObject().toString().equals(nombreBuscado)) {
+            return nodoActual;
+        }
+        for (int i = 0; i < nodoActual.getChildCount(); i++) {
+            javax.swing.tree.DefaultMutableTreeNode hijo = (javax.swing.tree.DefaultMutableTreeNode) nodoActual.getChildAt(i);
+            javax.swing.tree.DefaultMutableTreeNode resultado = buscarNodoRecursivo(hijo, nombreBuscado);
+            if (resultado != null) {
+                return resultado;
+            }
+        }
+        return null;
+    }
+    
+    private void escribirJournal(String operacion, String archivo, String estado) {
+        if (txtJournal != null) {
+            String hora = java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss"));
+            String registro = "[" + hora + "] OP: " + operacion + " | Archivo: " + archivo + " | Estado: " + estado + "\n";
+            txtJournal.append(registro);
+            txtJournal.setCaretPosition(txtJournal.getDocument().getLength());
+        }
+    }
+    
                           
 
    
@@ -385,10 +526,11 @@ public class VistaSimulador extends javax.swing.JFrame {
         btnRenombrar = new javax.swing.JButton();
         btnCarpeta = new javax.swing.JButton();
         btnLeer = new javax.swing.JButton();
+        lblMetricas = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
-        jTree1.setBackground(new java.awt.Color(153, 153, 153));
+        jTree1.setBackground(new java.awt.Color(0, 0, 0));
         jScrollPane1.setViewportView(jTree1);
 
         panelDisco.setBackground(new java.awt.Color(153, 153, 153));
@@ -516,6 +658,10 @@ public class VistaSimulador extends javax.swing.JFrame {
             }
         });
 
+        lblMetricas.setBackground(new java.awt.Color(0, 0, 0));
+        lblMetricas.setForeground(new java.awt.Color(255, 255, 255));
+        lblMetricas.setText("Cabezal: 0 | Distancia Total: 0");
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -525,25 +671,7 @@ public class VistaSimulador extends javax.swing.JFrame {
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 202, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(cbRol, javax.swing.GroupLayout.PREFERRED_SIZE, 171, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(115, 115, 115)
-                        .addComponent(cbPolitica, javax.swing.GroupLayout.PREFERRED_SIZE, 191, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(273, 273, 273))
-                    .addGroup(layout.createSequentialGroup()
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(layout.createSequentialGroup()
-                                .addGap(30, 30, 30)
-                                .addComponent(panelDisco, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addGroup(layout.createSequentialGroup()
-                                        .addGap(18, 18, 18)
-                                        .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 423, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                        .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 337, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                    .addGroup(layout.createSequentialGroup()
-                                        .addGap(109, 109, 109)
-                                        .addComponent(jScrollPane4, javax.swing.GroupLayout.PREFERRED_SIZE, 522, javax.swing.GroupLayout.PREFERRED_SIZE))))
                             .addGroup(layout.createSequentialGroup()
                                 .addGap(588, 588, 588)
                                 .addComponent(btnRenombrar)
@@ -558,8 +686,29 @@ public class VistaSimulador extends javax.swing.JFrame {
                                 .addGap(18, 18, 18)
                                 .addComponent(btnEliminar)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(btnCrear)))
-                        .addContainerGap(1236, Short.MAX_VALUE))))
+                                .addComponent(btnCrear))
+                            .addGroup(layout.createSequentialGroup()
+                                .addGap(30, 30, 30)
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addComponent(lblMetricas, javax.swing.GroupLayout.PREFERRED_SIZE, 343, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addGroup(layout.createSequentialGroup()
+                                        .addComponent(panelDisco, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                            .addGroup(layout.createSequentialGroup()
+                                                .addGap(18, 18, 18)
+                                                .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 423, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                                .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 337, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                            .addGroup(layout.createSequentialGroup()
+                                                .addGap(109, 109, 109)
+                                                .addComponent(jScrollPane4, javax.swing.GroupLayout.PREFERRED_SIZE, 522, javax.swing.GroupLayout.PREFERRED_SIZE)))))))
+                        .addContainerGap(1236, Short.MAX_VALUE))
+                    .addGroup(layout.createSequentialGroup()
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(cbRol, javax.swing.GroupLayout.PREFERRED_SIZE, 171, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(115, 115, 115)
+                        .addComponent(cbPolitica, javax.swing.GroupLayout.PREFERRED_SIZE, 191, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(273, 273, 273))))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -570,15 +719,19 @@ public class VistaSimulador extends javax.swing.JFrame {
                         .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 466, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(0, 0, Short.MAX_VALUE))
                     .addGroup(layout.createSequentialGroup()
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                            .addComponent(cbPolitica, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(cbRol, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addGroup(layout.createSequentialGroup()
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 26, Short.MAX_VALUE)
-                                .addComponent(panelDisco, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                    .addComponent(cbPolitica, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addComponent(cbRol, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addGap(0, 12, Short.MAX_VALUE))
+                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                                .addGap(0, 0, Short.MAX_VALUE)
+                                .addComponent(lblMetricas)))
+                        .addGap(18, 18, 18)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addGroup(layout.createSequentialGroup()
-                                .addGap(89, 89, 89)
+                                .addGap(63, 63, 63)
                                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                                     .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 198, javax.swing.GroupLayout.PREFERRED_SIZE)
                                     .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 207, javax.swing.GroupLayout.PREFERRED_SIZE))
@@ -593,7 +746,8 @@ public class VistaSimulador extends javax.swing.JFrame {
                                     .addComponent(btnCrear))
                                 .addGap(35, 35, 35)
                                 .addComponent(jScrollPane4, javax.swing.GroupLayout.PREFERRED_SIZE, 151, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGap(72, 72, 72)))))
+                                .addGap(72, 72, 72))
+                            .addComponent(panelDisco, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))))
                 .addContainerGap())
         );
 
@@ -983,14 +1137,15 @@ public class VistaSimulador extends javax.swing.JFrame {
     /**
      * @param args the command line arguments
      */
-    public static void main(String args[]) {
+        public static void main(String args[]) {
         /* Configuración del Tema Oscuro (Dark Mode) */
         try {
             // Colores base del Dark Mode
             java.awt.Color fondoPrincipal = new java.awt.Color(34, 40, 49);
             java.awt.Color fondoPaneles = new java.awt.Color(49, 54, 63);
             java.awt.Color textoBlanco = new java.awt.Color(238, 238, 238);
-            
+            java.awt.Color seleccion = new java.awt.Color(57, 62, 70); // Color para selección del árbol
+
             javax.swing.UIManager.put("Panel.background", fondoPrincipal);
             javax.swing.UIManager.put("OptionPane.background", fondoPrincipal);
             javax.swing.UIManager.put("OptionPane.messageForeground", textoBlanco);
@@ -1006,11 +1161,23 @@ public class VistaSimulador extends javax.swing.JFrame {
             javax.swing.UIManager.put("TableHeader.foreground", textoBlanco);
             javax.swing.UIManager.put("ScrollPane.background", fondoPrincipal);
             
-            javax.swing.UIManager.put("Tree.background", fondoPaneles);
-            javax.swing.UIManager.put("Tree.textForeground", textoBlanco);
+            // Textos generales
             javax.swing.UIManager.put("TextArea.background", fondoPaneles);
             javax.swing.UIManager.put("TextArea.foreground", textoBlanco);
             javax.swing.UIManager.put("Label.foreground", textoBlanco);
+
+            // ==========================================
+            // CONFIGURACIÓN AVANZADA DEL JTREE (ÁRBOL)
+            // ==========================================
+            javax.swing.UIManager.put("Tree.background", fondoPaneles);
+            javax.swing.UIManager.put("Tree.textForeground", textoBlanco);
+            javax.swing.UIManager.put("Tree.selectionBackground", seleccion);
+            javax.swing.UIManager.put("Tree.selectionForeground", java.awt.Color.WHITE);
+            javax.swing.UIManager.put("Tree.selectionBorderColor", seleccion);
+            javax.swing.UIManager.put("Tree.paintLines", false); // Quita las líneas punteadas viejas
+            javax.swing.UIManager.put("Tree.rowHeight", 25); // Más espacio entre carpetas
+            javax.swing.UIManager.put("Tree.leftChildIndent", 10);
+            javax.swing.UIManager.put("Tree.rightChildIndent", 10);
             
             for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
                 if ("Nimbus".equals(info.getName())) {
@@ -1046,6 +1213,7 @@ public class VistaSimulador extends javax.swing.JFrame {
     private javax.swing.JScrollPane jScrollPane4;
     private javax.swing.JTable jTable1;
     private javax.swing.JTree jTree1;
+    private javax.swing.JLabel lblMetricas;
     private javax.swing.JPanel panelDisco;
     private javax.swing.JTable tablaProcesos;
     private javax.swing.JTextArea txtJournal;
@@ -1236,18 +1404,88 @@ public class VistaSimulador extends javax.swing.JFrame {
     }
 
 
-        private void escribirJournal(String operacion, String archivo, String estado) {
-        if (txtJournal != null) {
-            // Obtenemos la hora actual para que el log se vea bien pro
-            String hora = new java.text.SimpleDateFormat("HH:mm:ss").format(new java.util.Date());
-            String registro = "[" + hora + "] OP: " + operacion + " | Archivo: " + archivo + " | Estado: " + estado + "\n";
+        
+}
+        
+        
+        // ==========================================
+// RENDERIZADOR PERSONALIZADO PARA ICONOS MODERNOS
+// ==========================================
+class ModernTreeRenderer extends javax.swing.tree.DefaultTreeCellRenderer {
+    
+    // Definimos los colores neón que ya usamos
+    private final java.awt.Color colorCarpeta = new java.awt.Color(118, 171, 174); // Azul grisáceo
+    private final java.awt.Color colorArchivo = new java.awt.Color(0, 255, 127); // Verde neón
+    
+    public ModernTreeRenderer() {
+        // Hacemos el fondo del renderizador transparente para que use el del árbol
+        setOpaque(false);
+    }
 
-            txtJournal.append(registro);
-            // Hacemos que el cuadro de texto haga scroll automático hacia abajo
-            txtJournal.setCaretPosition(txtJournal.getDocument().getLength());
+    @Override
+    public java.awt.Component getTreeCellRendererComponent(javax.swing.JTree tree, Object value,
+            boolean sel, boolean expanded, boolean leaf, int row, boolean hasFocus) {
+        
+        super.getTreeCellRendererComponent(tree, value, sel, expanded, leaf, row, hasFocus);
+        javax.swing.tree.DefaultMutableTreeNode node = (javax.swing.tree.DefaultMutableTreeNode) value;
+        setForeground(java.awt.Color.WHITE);
+
+        if (expanded) {
+            
+            setIcon(createIcon(colorCarpeta, true));
+        } else if (!leaf) {
+            // Icono Carpeta Cerrada (Un círculo vacío)
+            setIcon(createIcon(colorCarpeta, false));
+        } else {
+            setIcon(createLeafIcon(colorArchivo));
         }
+        
+        return this;
+    }
+    
+    private javax.swing.Icon createIcon(java.awt.Color color, boolean filled) {
+        return new javax.swing.Icon() {
+            @Override
+            public void paintIcon(java.awt.Component c, java.awt.Graphics g, int x, int y) {
+                java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
+                g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(color);
+                int size = 10;
+                int drawX = x + (getIconWidth() - size) / 2;
+                int drawY = y + (getIconHeight() - size) / 2;
+                if (filled) {
+                    g2.fillOval(drawX, drawY, size, size);
+                } else {
+                    g2.setStroke(new java.awt.BasicStroke(1.5f));
+                    g2.drawOval(drawX, drawY, size, size);
+                }
+                g2.dispose();
+            }
+            @Override public int getIconWidth() { return 18; }
+            @Override public int getIconHeight() { return 18; }
+        };
+    }
+    
+    // Método auxiliar para crear iconos de archivos (líneas)
+    private javax.swing.Icon createLeafIcon(java.awt.Color color) {
+        return new javax.swing.Icon() {
+            @Override
+            public void paintIcon(java.awt.Component c, java.awt.Graphics g, int x, int y) {
+                java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
+                g2.setColor(color);
+                g2.setStroke(new java.awt.BasicStroke(2.0f));
+                int height = 12;
+                int drawX = x + getIconWidth() / 2;
+                int drawY = y + (getIconHeight() - height) / 2;
+                g2.drawLine(drawX, drawY, drawX, drawY + height);
+                g2.dispose();
+            }
+            @Override public int getIconWidth() { return 18; }
+            @Override public int getIconHeight() { return 18; }
+        };
+    }
 }
 
 
 
-    }
+   
