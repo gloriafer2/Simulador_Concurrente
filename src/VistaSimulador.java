@@ -57,7 +57,6 @@ public class VistaSimulador extends javax.swing.JFrame {
         }
         
         
-        
         panelDisco.addHierarchyListener(e -> {
             if (panelDisco.isShowing()) {
                 java.awt.EventQueue.invokeLater(() -> dibujarDisco());
