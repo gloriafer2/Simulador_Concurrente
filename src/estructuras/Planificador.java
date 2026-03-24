@@ -4,29 +4,33 @@
  */
 package estructuras;
 
-/**
- * Encargado de decidir el orden de atención de las solicitudes de E/S.
- */
+
+
 public class Planificador {
     private String algoritmoActual = "FIFO";
-    private boolean subiendo = true; // Para lógica de SCAN y C-SCAN
+    private boolean subiendo = true; // El ascensor empieza subiendo
 
-    /**
-     * Selecciona el siguiente proceso de la cola según la política activa.
-     */
     public Proceso obtenerSiguiente(ColaProcesos cola, int posCabezal) {
         if (cola.estaVacia()) return null;
 
         switch (algoritmoActual) {
             case "SSTF":
-                // Usamos el nombre exacto que tienes en ColaProcesos.java
                 return cola.extraerSSTF(posCabezal);
             
             case "SCAN":
-                return obtenerSCAN(cola, posCabezal);
+                // Intentamos buscar en la dirección actual
+                Proceso pSCAN = cola.extraerSCAN(posCabezal, subiendo);
+                
+                // Si retorna null, es porque llegamos al final de las peticiones en esa dirección
+                if (pSCAN == null) {
+                    subiendo = !subiendo; // Volteamos la dirección del ascensor
+                    pSCAN = cola.extraerSCAN(posCabezal, subiendo); // Buscamos de nuevo
+                }
+                return pSCAN;
                 
             case "C-SCAN":
-                return obtenerCSCAN(cola, posCabezal);
+                // C-SCAN siempre sube, y cuando llega al final salta al inicio
+                return cola.extraerCSCAN(posCabezal);
                 
             case "FIFO":
             default:
@@ -34,20 +38,12 @@ public class Planificador {
         }
     }
 
-    private Proceso obtenerSCAN(ColaProcesos cola, int posCabezal) {
-        // En un SCAN real, buscas el más cercano en la dirección actual.
-        // Si no hay más en esa dirección, cambias 'subiendo = !subiendo'.
-        // Por ahora, para que compile, usamos SSTF como base:
-        return cola.extraerSSTF(posCabezal);
-    }
-
-    private Proceso obtenerCSCAN(ColaProcesos cola, int posCabezal) {
-        // En C-SCAN solo se atiende en una dirección y luego vuelve al inicio.
-        return cola.desencolar(); 
-    }
-
     public void setAlgoritmo(String nuevoAlgoritmo) {
         this.algoritmoActual = nuevoAlgoritmo;
+        // Reiniciamos la dirección por defecto al cambiar de política
+        if (nuevoAlgoritmo.equals("SCAN") || nuevoAlgoritmo.equals("C-SCAN")) {
+            this.subiendo = true; 
+        }
     }
 
     public String getAlgoritmoActual() {
